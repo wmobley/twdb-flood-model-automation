@@ -269,6 +269,9 @@
       "url": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.msi",
       "allowedHosts": [
         "download.qgis.org",
+        "dl1.qgis.org",
+        "dl2.qgis.org",
+        "dl3.qgis.org",
         "dl4.qgis.org"
       ],
       "sourcePage": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.sha256sum",

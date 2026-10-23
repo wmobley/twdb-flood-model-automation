@@ -26,7 +26,9 @@ Describe 'Reviewed catalog and selection' {
     }
     It 'allows the official QGIS redirect mirror and rejects lookalike hosts' {
         $qgis = (Read-WorkstationManifest $catalog).packages | Where-Object product -EQ QGIS
-        { Assert-AllowedUri -Uri 'https://dl4.qgis.org/downloads/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Not -Throw
+        foreach ($mirror in @('dl1.qgis.org','dl2.qgis.org','dl3.qgis.org','dl4.qgis.org')) {
+            { Assert-AllowedUri -Uri ('https://' + $mirror + '/downloads/test.msi') -AllowedHosts $qgis.allowedHosts } | Should -Not -Throw
+        }
         { Assert-AllowedUri -Uri 'https://dl4.qgis.org.evil.example/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Throw '*Unapproved*'
         { Assert-AllowedUri -Uri 'https://unreviewed.qgis.org/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Throw '*Unapproved*'
     }
