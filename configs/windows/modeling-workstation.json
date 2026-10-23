@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "catalogVerifiedOn": "2026-10-22",
+  "packages": [
+    {
+      "id": "hec-ras-2-2",
+      "product": "HEC-RAS",
+      "version": "2.2",
+      "major": 2,
+      "architecture": "legacy-unknown",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "ras22_cd.exe",
+      "url": "https://www.hec.usace.army.mil/software/hec-ras/downloads/ras22_cd.exe",
+      "allowedHosts": [
+        "www.hec.usace.army.mil"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-ras/download.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-ras-3-1-3",
+      "product": "HEC-RAS",
+      "version": "3.1.3",
+      "major": 3,
+      "architecture": "legacy-unknown",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-RAS313_Setup.exe",
+      "url": "https://www.hec.usace.army.mil/software/hec-ras/downloads/HEC-RAS313_Setup.exe",
+      "allowedHosts": [
+        "www.hec.usace.army.mil"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-ras/download.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-ras-4-1",
+      "product": "HEC-RAS",
+      "version": "4.1",
+      "major": 4,
+      "architecture": "legacy-unknown",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-RAS_410_Setup.exe",
+      "url": "https://www.hec.usace.army.mil/software/hec-ras/downloads/HEC-RAS_410_Setup.exe",
+      "allowedHosts": [
+        "www.hec.usace.army.mil"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-ras/download.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-ras-5-0-7",
+      "product": "HEC-RAS",
+      "version": "5.0.7",
+      "major": 5,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-RAS_507_Without_Examples_Setup.exe",
+      "url": "https://github.com/HydrologicEngineeringCenter/hec-downloads/releases/download/1.0.7/HEC-RAS_507_Without_Examples_Setup.exe",
+      "allowedHosts": [
+        "github.com",
+        "release-assets.githubusercontent.com"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-ras/download.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-ras-6-6",
+      "product": "HEC-RAS",
+      "version": "6.6",
+      "major": 6,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-RAS_66_Setup.exe",
+      "url": "https://github.com/HydrologicEngineeringCenter/hec-downloads/releases/download/1.0.33/HEC-RAS_66_Setup.exe",
+      "allowedHosts": [
+        "github.com",
+        "release-assets.githubusercontent.com"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-ras/download.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-ras-7-0-2",
+      "product": "HEC-RAS",
+      "version": "7.0.2",
+      "major": 7,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-RAS_702_Setup.exe",
+      "url": "https://github.com/HydrologicEngineeringCenter/hec-downloads/releases/download/1.0.48/HEC-RAS_702_Setup.exe",
+      "allowedHosts": [
+        "github.com",
+        "release-assets.githubusercontent.com"
+      ],
+      "sourcePage": "https://api.github.com/repos/HydrologicEngineeringCenter/hec-downloads/releases/tags/1.0.48",
+      "installMethod": "hec-interactive",
+      "requiresAdmin": true,
+      "registryName": "HEC-RAS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": "49e2634c7b6552ce78dcb79d741f7abdaa93020d67c2d8790a677867a0841e6c",
+        "provenance": "Publisher-hosted SHA256 pinned on 2026-10-22; https://api.github.com/repos/HydrologicEngineeringCenter/hec-downloads/releases/tags/1.0.48"
+      },
+      "coexistenceEvidence": "https://www.hec.usace.army.mil/confluence/rasdocs/rasrn/7.0.2",
+      "notes": "Interactive installation; preserve the version-specific default directory. Runtime/Windows VM validation remains untested."
+    },
+    {
+      "id": "hec-hms-2-2-2",
+      "product": "HEC-HMS",
+      "version": "2.2.2",
+      "major": 2,
+      "architecture": "legacy-unknown",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "Hms222Single.exe",
+      "url": "https://www.hec.usace.army.mil/software/hec-hms/downloads/Hms222Single.exe",
+      "allowedHosts": [
+        "www.hec.usace.army.mil"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-hms/downloads.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-HMS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-hms-3-5",
+      "product": "HEC-HMS",
+      "version": "3.5",
+      "major": 3,
+      "architecture": "legacy-unknown",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-HMS_35_Setup.exe",
+      "url": "https://www.hec.usace.army.mil/software/hec-hms/downloads/HEC-HMS_35_Setup.exe",
+      "allowedHosts": [
+        "www.hec.usace.army.mil"
+      ],
+      "sourcePage": "https://www.hec.usace.army.mil/software/hec-hms/downloads.aspx",
+      "installMethod": "manual",
+      "requiresAdmin": true,
+      "registryName": "HEC-HMS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": null,
+        "provenance": "No reviewed publisher checksum available. Local hash is an audit fingerprint only; script launch prohibited."
+      },
+      "coexistenceEvidence": "",
+      "notes": "Manual legacy installation: publisher authenticity and/or side-by-side/Windows11 compatibility not validated; inspect official instructions and use an isolated older Windows VM if needed."
+    },
+    {
+      "id": "hec-hms-4-14",
+      "product": "HEC-HMS",
+      "version": "4.14",
+      "major": 4,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "HEC-HMS_414_Setup.exe",
+      "url": "https://github.com/HydrologicEngineeringCenter/hec-downloads/releases/download/1.0.47/HEC-HMS_414_Setup.exe",
+      "allowedHosts": [
+        "github.com",
+        "release-assets.githubusercontent.com"
+      ],
+      "sourcePage": "https://api.github.com/repos/HydrologicEngineeringCenter/hec-downloads/releases/tags/1.0.47",
+      "installMethod": "hec-interactive",
+      "requiresAdmin": true,
+      "registryName": "HEC-HMS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": "ed76c8c4f20d709eb4ee8d45f72e3896e9eccb9095c8e831ae8dd706a8ddd645",
+        "provenance": "Publisher-hosted SHA256 pinned on 2026-10-22; https://api.github.com/repos/HydrologicEngineeringCenter/hec-downloads/releases/tags/1.0.47"
+      },
+      "coexistenceEvidence": "https://www.hec.usace.army.mil/confluence/hmsdocs/hmsum/4.14/installing-and-running-the-program/installation",
+      "notes": "Interactive installation; preserve the version-specific default directory. Runtime/Windows VM validation remains untested."
+    },
+    {
+      "id": "miniforge-26-7-2-1",
+      "product": "Miniforge",
+      "version": "26.7.2.1",
+      "major": 26,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "Miniforge3-26.7.2-1-Windows-x86_64.exe",
+      "url": "https://github.com/conda-forge/miniforge/releases/download/26.7.2-1/Miniforge3-26.7.2-1-Windows-x86_64.exe",
+      "allowedHosts": [
+        "github.com",
+        "release-assets.githubusercontent.com"
+      ],
+      "sourcePage": "https://conda-forge.org/miniforge/",
+      "installMethod": "miniforge-silent",
+      "requiresAdmin": false,
+      "registryName": "Miniforge",
+      "detectionMethod": "miniforge-history",
+      "integrity": {
+        "sha256": "cda54a8d6d1d956a9ff6d497afc5abd9b0a655897e129a0e4d92a18966fd87e5",
+        "provenance": "Publisher-hosted SHA256 pinned on 2026-10-22; https://conda-forge.org/miniforge/"
+      },
+      "coexistenceEvidence": "https://github.com/conda-forge/miniforge#install",
+      "notes": "Current-user silent installation; Python and Conda supplied together; no global registration or PATH changes."
+    },
+    {
+      "id": "qgis-3-44-15",
+      "product": "QGIS",
+      "version": "3.44.15",
+      "major": 3,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-22",
+      "fileName": "QGIS-OSGeo4W-3.44.15-2.msi",
+      "url": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.msi",
+      "allowedHosts": [
+        "download.qgis.org"
+      ],
+      "sourcePage": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.sha256sum",
+      "installMethod": "msi-interactive",
+      "requiresAdmin": true,
+      "registryName": "QGIS",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": "81f7933bda110fa683a5f8f8129bc9b2ad2b814e65e99916c0d657af9518399c",
+        "provenance": "Publisher-hosted SHA256 pinned on 2026-10-22; https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.sha256sum"
+      },
+      "coexistenceEvidence": "https://qgis.org/resources/installation-guide/",
+      "notes": "Interactive installation; preserve the version-specific default directory. Runtime/Windows VM validation remains untested."
+    },
+    {
+      "id": "chrome-156-0-8078-48",
+      "product": "Chrome",
+      "version": "156.0.8078.48",
+      "major": 156,
+      "architecture": "x64",
+      "stability": "stable",
+      "verifiedOn": "2026-10-23",
+      "fileName": "googlechromestandaloneenterprise64.msi",
+      "url": "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi",
+      "allowedHosts": [
+        "dl.google.com"
+      ],
+      "sourcePage": "https://chromeenterprise.google/download/",
+      "installMethod": "msi-interactive",
+      "requiresAdmin": true,
+      "registryName": "Google Chrome",
+      "detectionMethod": "uninstall-registry",
+      "integrity": {
+        "sha256": "a31bd8a4746069a128bf3beefdaa246c792af5f15bbf06af0259abc895c9609b",
+        "provenance": "Independent published SHA256 from Microsoft WinGet catalog, not a Google-published checksum; https://github.com/microsoft/winget-pkgs/blob/f1732f9bfd5382b8e03f444e9f4be1dae8de82c0/manifests/g/Google/Chrome/156.0.8078.48/Google.Chrome.installer.yaml"
+      },
+      "coexistenceEvidence": "https://support.google.com/chrome/a/answer/7650247",
+      "notes": "Interactive machine-wide stable Chrome MSI. Existing Chrome installations are preserved. Google rolling download URL must match the pinned checksum; review catalog when bytes change. Automatic updates remain enabled; installed version verification can fail if Chrome updates during setup."
+    }
+  ],
+  "unavailableFamilies": [
+    {
+      "product": "HEC-RAS",
+      "major": 1,
+      "reason": "No 1.x installer in reviewed official catalog; omission accepted and informational."
+    },
+    {
+      "product": "HEC-HMS",
+      "major": 1,
+      "reason": "No 1.x installer in reviewed official catalog; omission accepted and informational."
+    }
+  ]
+}
