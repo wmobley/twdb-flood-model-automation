@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the repository and its release."
+title: "TWDB Flood Model Automation"
+version: "0.1.0"
+date-released: 2026-10-08
+license: BSD-3-Clause
+type: software
+authors:
+  - family-names: Mobley
+    given-names: William
+    affiliation: Texas Advanced Computing Center, The University of Texas at Austin

@@ -1,0 +1,6 @@
+name: kickoff-single-run
+model_family: hec-ras
+model_path: models/example-model
+output_path: run-outputs/kickoff-single-run
+plan: plans/example-plan
+concurrency: 1

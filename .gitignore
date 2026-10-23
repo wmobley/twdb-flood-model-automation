@@ -1,0 +1,40 @@
+.DS_Store
+.wolf/
+.claude/
+CLAUDE.md
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.env
+.env.*
+!.env.example
+
+# Notebook and local analysis state
+.ipynb_checkpoints/
+*.jupyter_cache/
+
+# Model outputs and operational logs
+outputs/
+run-outputs/
+logs/
+*.log
+*.hdf
+*.hdf5
+*.tmp
+
+# Local/private model archives
+models/private/
+models/**/*.zip
+models/**/*.7z
+models/**/*.rar
+
+# Local credentials and generated configuration
+*.pem
+*.key
+*.p12
+secrets/
+local-config/

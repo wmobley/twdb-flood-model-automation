@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "twdb-flood-model-automation"
+version = "0.1.0"
+description = "Scaffold for TWDB flood-model automation, load balancing, and notebook workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+dependencies = [
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools]
+packages = ["load_balancer"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
