@@ -20,7 +20,7 @@ version. Detection failures stop installation before downloads or installer laun
 
 Accepting the OS does not certify the applications. Install mode emits a server
 warning and includes untested compatibility in each package report message.
-Legacy packages remain manual-required. Verify application startup and representative
+Legacy packages require explicit attended opt-in to launch. Verify application startup and representative
 model computations on a disposable Server 2022 VM before using it for modeling.
 [Google's Chrome requirements](https://support.google.com/chrome/a/answer/7100626?hl=en)
 include Windows Server 2016 and later. The reviewed
@@ -108,14 +108,14 @@ HEC-HMS 2.2.2, 3.5, and 4.14. Neither reviewed official catalog lists 1.x; its
 absence is informational and does not itself cause installation failure.
 
 Historical downloads may lack publisher checksums, supported installer behavior,
-or Windows 11 compatibility evidence. Such entries remain manual-required rather
+or Windows 11 compatibility evidence. By default, such entries remain manual-required rather
 than being silently omitted or reported as installed. Review their report messages
 and vendor instructions. An isolated older Windows VM may be necessary; this
 script does not create one.
 
 In this catalog, automatic script launch is enabled for Miniforge, QGIS, Chrome, RAS 7.0.2,
 and HMS 4.14. The remaining HEC versions are downloaded for manual review and
-installation. The script records their locally calculated hashes but does not
+installation unless `-AllowLegacyInstallers` explicitly enables attended setup. The script records their locally calculated hashes but does not
 treat them as publisher-verified. Install mode therefore returns an incomplete
 result until those historical versions are installed and detected on a rerun.
 
@@ -167,6 +167,24 @@ policy if it is not available):
 Invoke-Pester -Path .\tests\windows\Install-ModelingWorkstation.Tests.ps1
 ```
 
-Current verification: all 52 mocked Pester tests passed on macOS, including Chrome
+Current verification: all 57 mocked Pester tests passed on macOS, including Chrome
 and Server 2022 platform cases. Windows PowerShell 5.1 compatibility is targeted but has not been
 executed on Windows. No actual application installations were tested in this session.
+
+## Attended legacy HEC setup
+
+To try older HEC installers, run as Administrator and attend each setup dialog:
+
+```powershell
+.\scripts\windows\Install-ModelingWorkstation.ps1 -Mode Install -Products HEC-RAS,HEC-HMS -AllowLegacyInstallers
+```
+
+This explicitly opts into launching catalog entries marked manual. Without the
+switch they remain download/manual-review only. Plan and DownloadOnly never
+launch installers, including with the switch. Existing detected conflicts remain
+manual-required. Preserve each version's installation directory in setup dialogs.
+
+Some legacy packages lack an independently published checksum or valid signature.
+Attending setup does not establish authenticity or Server compatibility. The report
+records opt-in, original method, artifact hash/signature and installation outcome.
+A successful exit must still pass version detection; model computation stays untested.

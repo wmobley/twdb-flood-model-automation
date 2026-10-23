@@ -4,7 +4,7 @@ Plans, downloads, or installs a reviewed Windows modeling workstation catalog.
 .DESCRIPTION
 Defaults to Plan. DownloadOnly never launches installers. Install requires Windows 11 or Windows Server 2022 Desktop Experience, x64.
 Run Install first in a normal PowerShell for JustMe Miniforge, then rerun as Administrator
-for QGIS and modern HEC installers. Legacy packages remain manual-required.
+for QGIS and modern HEC installers. Legacy packages require -AllowLegacyInstallers for attended execution.
 No execution policy, global PATH, Windows features, or existing environments are changed.
 .EXAMPLE
 .\Install-ModelingWorkstation.ps1 -Mode Plan
@@ -18,6 +18,7 @@ No execution policy, global PATH, Windows features, or existing environments are
 param(
     [ValidateSet('Plan','DownloadOnly','Install')][string]$Mode = 'Plan',
     [ValidateSet('Miniforge','QGIS','HEC-RAS','HEC-HMS','Chrome')][string[]]$Products = @('Miniforge','QGIS','HEC-RAS','HEC-HMS','Chrome'),
+    [switch]$AllowLegacyInstallers,
     [string]$ManifestPath = (Join-Path $PSScriptRoot '../../configs/windows/modeling-workstation.json'),
     [string]$CacheDirectory = (Join-Path ([IO.Path]::GetTempPath()) 'modeling-workstation-cache'),
     [string]$ReportDirectory = (Join-Path ([IO.Path]::GetTempPath()) 'modeling-workstation-reports'),
@@ -216,8 +217,12 @@ function New-ProtectedInstallerStage {
     return $stage
 }
 function Install-WorkstationPackage {
-    param($Package,$Artifact,[string]$MiniforgeDirectory)
-    if ($Package.installMethod -eq 'manual') { throw 'Manual package cannot be launched.' }
+    param($Package,$Artifact,[string]$MiniforgeDirectory,[switch]$AllowLegacyInstallers)
+    $legacy = $Package.installMethod -eq 'manual'
+    if ($legacy -and (!$AllowLegacyInstallers -or $Package.product -notin @('HEC-RAS','HEC-HMS'))) { throw 'Manual package cannot be launched without explicit legacy HEC opt-in.' }
+    if ($legacy) {
+        Write-Warning 'Attended legacy HEC installation requested. Publisher checksum may be unavailable; compatibility is untested. Keep existing installation directories intact.'
+    }
     [void](Assert-Artifact $Artifact.path $Package)
     $path = $Artifact.path
     if ($Package.requiresAdmin) {
@@ -230,7 +235,9 @@ function Install-WorkstationPackage {
     $lock = [IO.File]::Open($path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
     try {
         [void](Assert-Artifact $path $Package)
-        switch ($Package.installMethod) {
+        $method = $Package.installMethod
+        if ($legacy) { $method = 'hec-interactive' }
+        switch ($method) {
             'miniforge-silent' {
                 if ($MiniforgeDirectory -notmatch '^[A-Za-z]:\\[A-Za-z0-9_\\.-]+$' -or (Test-Path -LiteralPath $MiniforgeDirectory)) { throw 'Miniforge needs a new absolute path without spaces/special characters; existing directories are preserved.' }
                 if (Test-WorkstationAdministrator) { throw 'Install JustMe Miniforge from a non-elevated PowerShell, then rerun elevated for other packages.' }
@@ -286,12 +293,12 @@ function Assert-WorkstationInstallPlatform {
         throw "$requirement Detected version $($platform.Version), build $($platform.Build), product type $($platform.ProductType), architecture $($platform.Architecture), installation type $($platform.InstallationType)."
     }
     if ($server) {
-        Write-Warning 'Windows Server 2022 accepted. Application installation and model computation on this OS remain untested; legacy/manual packages stay manual-required.'
+        Write-Warning 'Windows Server 2022 accepted. Application installation and model computation on this OS remain untested; legacy/manual packages require explicit attended opt-in.'
     }
     return $platform
 }
 function Invoke-Workstation {
-    param([string]$Mode,[string]$ManifestPath,[string]$CacheDirectory,[string]$ReportDirectory,[string]$MiniforgeDirectory,
+    param([string]$Mode,[string]$ManifestPath,[string]$CacheDirectory,[string]$ReportDirectory,[string]$MiniforgeDirectory,[switch]$AllowLegacyInstallers,
         [ValidateSet('Miniforge','QGIS','HEC-RAS','HEC-HMS','Chrome')][string[]]$Products = @('Miniforge','QGIS','HEC-RAS','HEC-HMS','Chrome'))
     $manifest = Read-WorkstationManifest $ManifestPath
     if (!$Products -or !$Products.Count) { throw 'Select at least one product.' }
@@ -309,6 +316,8 @@ function Invoke-Workstation {
     $results = @()
     foreach ($p in @(Select-WorkstationPackage $manifest.packages | Where-Object { $_.product -in $Products })) {
         $r = [pscustomobject]@{id=$p.id;product=$p.product;version=$p.version;major=$p.major;status='planned';runtimeReadiness='untested';message=$p.notes;sourceUrl=$p.url;requiresAdmin=$p.requiresAdmin;installMethod=$p.installMethod;artifact=$null;exitCode=$null;rebootRequired=$false}
+        $legacyAllowed = $AllowLegacyInstallers -and $p.installMethod -eq 'manual' -and $p.product -in @('HEC-RAS','HEC-HMS')
+        if ($legacyAllowed) { $r.message += ' Attended legacy execution opted in; publisher checksum may be unavailable; compatibility untested.' }
         if ($platform -and $platform.ProductType -in @(2,3)) {
             $r.message += ' Windows Server 2022: application/runtime compatibility untested; validate startup and representative models manually.'
         }
@@ -319,14 +328,14 @@ function Invoke-Workstation {
             $detected = Get-InstalledPackage $p $MiniforgeDirectory
             $r.message += " $($detected.message)"
             if ($detected.state -eq 'exact') { $r.status='installed-detected' }
-            elseif ($Mode -eq 'Plan') { if ($p.installMethod -eq 'manual' -or $detected.state -eq 'conflict') { $r.status='manual-required' } }
+            elseif ($Mode -eq 'Plan') { if (($p.installMethod -eq 'manual' -and !$legacyAllowed) -or $detected.state -eq 'conflict') { $r.status='manual-required' } }
             else {
                 $r.artifact = Get-PackageArtifact $p $CacheDirectory
                 $r.status='downloaded'
                 if ($Mode -eq 'Install') {
-                    if ($p.installMethod -eq 'manual' -or $detected.state -eq 'conflict') { $r.status='manual-required' }
+                    if (($p.installMethod -eq 'manual' -and !$legacyAllowed) -or $detected.state -eq 'conflict') { $r.status='manual-required' }
                     else {
-                        $r.exitCode = Install-WorkstationPackage $p $r.artifact $MiniforgeDirectory
+                        $r.exitCode = Install-WorkstationPackage $p $r.artifact $MiniforgeDirectory -AllowLegacyInstallers:$AllowLegacyInstallers
                         $r.rebootRequired = $r.exitCode -in @(3010,1641)
                         if ($r.exitCode -notin @(0,3010,1641)) { throw "Installer returned $($r.exitCode)." }
                         if ((Get-InstalledPackage $p $MiniforgeDirectory).state -ne 'exact') { throw 'Installer ended but exact installed version could not be verified. Inspect installation manually.' }
@@ -343,7 +352,7 @@ function Invoke-Workstation {
         Write-Host "$($missing.product) $($missing.major).x: unavailable (informational) - $($missing.reason)"
         $results += [pscustomobject]@{id="$($missing.product)-$($missing.major)-unavailable";product=$missing.product;version=$null;major=$missing.major;status='unavailable';runtimeReadiness='untested';message=$missing.reason}
     }
-    $report = [pscustomobject]@{schemaVersion=1;generatedAt=[DateTime]::UtcNow.ToString('o');mode=$Mode;requestedProducts=$Products;catalogVerifiedOn=$manifest.catalogVerifiedOn;packages=$results;exitCode=(Get-WorkstationExitCode $Mode $results)}
+    $report = [pscustomobject]@{schemaVersion=1;generatedAt=[DateTime]::UtcNow.ToString('o');mode=$Mode;allowLegacyInstallers=[bool]$AllowLegacyInstallers;requestedProducts=$Products;catalogVerifiedOn=$manifest.catalogVerifiedOn;packages=$results;exitCode=(Get-WorkstationExitCode $Mode $results)}
     [void](New-Item -ItemType Directory -Path $ReportDirectory -Force)
     $reportPath = Join-Path $ReportDirectory ("workstation-{0}-{1}-{2}.json" -f $Mode,[DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff'),[guid]::NewGuid().ToString('N'))
     $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $reportPath -Encoding UTF8
@@ -351,6 +360,6 @@ function Invoke-Workstation {
     return $report
 }
 if ($MyInvocation.InvocationName -ne '.') {
-    try { $report = Invoke-Workstation -Mode $Mode -ManifestPath $ManifestPath -CacheDirectory $CacheDirectory -ReportDirectory $ReportDirectory -MiniforgeDirectory $MiniforgeDirectory -Products $Products; exit $report.exitCode }
+    try { $report = Invoke-Workstation -Mode $Mode -ManifestPath $ManifestPath -CacheDirectory $CacheDirectory -ReportDirectory $ReportDirectory -MiniforgeDirectory $MiniforgeDirectory -Products $Products -AllowLegacyInstallers:$AllowLegacyInstallers; exit $report.exitCode }
     catch { Write-Error $_ -ErrorAction Continue; exit 2 }
 }

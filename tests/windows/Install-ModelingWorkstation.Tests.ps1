@@ -131,6 +131,17 @@ Describe 'Mode boundaries and completion' {
         $report.exitCode | Should -Be 1
         Should -Invoke Install-WorkstationPackage -Times 0
     }
+    It 'never launches legacy installers in preview or download-only' -ForEach @('Plan','DownloadOnly') {
+        Invoke-Workstation -Mode $_ -Products HEC-RAS -AllowLegacyInstallers @invoke
+        Should -Invoke Install-WorkstationPackage -Times 0
+    }
+    It 'does not override legacy installation conflicts' {
+        Mock Assert-WorkstationInstallPlatform {}
+        Mock Get-InstalledPackage { [pscustomobject]@{state='conflict';message='preserve existing'} }
+        $report = Invoke-Workstation -Mode Install -Products HEC-RAS -AllowLegacyInstallers @invoke
+        @($report.packages | Where-Object status -EQ 'manual-required').Count | Should -Be 6
+        Should -Invoke Install-WorkstationPackage -Times 0
+    }
     It 'preserves exact installations without downloading' {
         Mock Get-InstalledPackage { [pscustomobject]@{state='exact';message='already installed'} }
         $report = Invoke-Workstation -Mode DownloadOnly @invoke
@@ -251,6 +262,17 @@ Describe 'Installer launch boundary' {
     It 'refuses manual legacy installer execution' {
         $package.installMethod = 'manual'
         { Install-WorkstationPackage $package $artifact 'C:\miniforge3' } | Should -Throw '*Manual*'
+        Should -Invoke Start-Process -Times 0
+    }
+    It 'launches manual HEC interactively only with explicit opt-in' {
+        $package.installMethod = 'manual'
+        Install-WorkstationPackage $package $artifact 'C:\miniforge3' -AllowLegacyInstallers | Should -Be 3010
+        Should -Invoke Start-Process -Times 1
+    }
+    It 'does not allow manual non-HEC packages through legacy opt-in' {
+        $package.installMethod = 'manual'
+        $package.product = 'QGIS'
+        { Install-WorkstationPackage $package $artifact 'C:\miniforge3' -AllowLegacyInstallers } | Should -Throw '*Manual*'
         Should -Invoke Start-Process -Times 0
     }
     It 'does not launch when staged verification fails' {
