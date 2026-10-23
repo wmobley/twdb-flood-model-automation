@@ -2,7 +2,7 @@
 .SYNOPSIS
 Plans, downloads, or installs a reviewed Windows modeling workstation catalog.
 .DESCRIPTION
-Defaults to Plan. DownloadOnly never launches installers. Install requires Windows 11 x64.
+Defaults to Plan. DownloadOnly never launches installers. Install requires Windows 11 or Windows Server 2022 Desktop Experience, x64.
 Run Install first in a normal PowerShell for JustMe Miniforge, then rerun as Administrator
 for QGIS and modern HEC installers. Legacy packages remain manual-required.
 No execution policy, global PATH, Windows features, or existing environments are changed.
@@ -258,10 +258,37 @@ function Get-WorkstationExitCode {
     if ($Mode -eq 'Install' -and @($Results | Where-Object { $_.status -notin @('installed-detected','installed-verified','unavailable') }).Count) { return 1 }
     return 0
 }
-function Assert-WorkstationInstallPlatform {
-    if (!(Test-WorkstationWindows) -or ![Environment]::Is64BitOperatingSystem -or $env:PROCESSOR_ARCHITECTURE -ne 'AMD64' -or [Environment]::OSVersion.Version.Build -lt 22000) {
-        throw 'Installation requires Windows 11 x64 and a 64-bit PowerShell process.'
+function Get-WorkstationPlatform {
+    $os = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
+    $installationType = $null
+    if ([int]$os.ProductType -in @(2,3)) {
+        $installationType = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name InstallationType -ErrorAction Stop).InstallationType
     }
+    return [pscustomobject]@{
+        Version = [version]$os.Version
+        Build = [int]$os.BuildNumber
+        ProductType = [int]$os.ProductType
+        InstallationType = $installationType
+        Is64BitOS = [Environment]::Is64BitOperatingSystem
+        Is64BitProcess = [Environment]::Is64BitProcess
+        Architecture = $env:PROCESSOR_ARCHITECTURE
+    }
+}
+function Assert-WorkstationInstallPlatform {
+    $requirement = 'Installation requires Windows 11 x64 or Windows Server 2022 x64 with Desktop Experience, and a 64-bit PowerShell process.'
+    if (!(Test-WorkstationWindows)) { throw $requirement }
+    try { $platform = Get-WorkstationPlatform }
+    catch { throw "Cannot identify the Windows platform: $($_.Exception.Message) $requirement" }
+    $windows10Kernel = $platform.Version.Major -eq 10 -and $platform.Version.Minor -eq 0
+    $client = $platform.ProductType -eq 1 -and $platform.Build -ge 22000
+    $server = $platform.ProductType -in @(2,3) -and $platform.Build -eq 20348 -and $platform.InstallationType -eq 'Server'
+    if (!$windows10Kernel -or !($client -or $server) -or !$platform.Is64BitOS -or !$platform.Is64BitProcess -or $platform.Architecture -ne 'AMD64') {
+        throw "$requirement Detected version $($platform.Version), build $($platform.Build), product type $($platform.ProductType), architecture $($platform.Architecture), installation type $($platform.InstallationType)."
+    }
+    if ($server) {
+        Write-Warning 'Windows Server 2022 accepted. Application installation and model computation on this OS remain untested; legacy/manual packages stay manual-required.'
+    }
+    return $platform
 }
 function Invoke-Workstation {
     param([string]$Mode,[string]$ManifestPath,[string]$CacheDirectory,[string]$ReportDirectory,[string]$MiniforgeDirectory,
@@ -274,13 +301,17 @@ function Invoke-Workstation {
     foreach ($directory in @($CacheDirectory,$ReportDirectory,$MiniforgeDirectory)) {
         if ([string]::IsNullOrWhiteSpace($directory) -or $directory -match '[\r\n"]' -or ![IO.Path]::IsPathRooted($directory)) { throw 'Use nonempty absolute paths without quotes or newlines.' }
     }
+    $platform = $null
     if ($Mode -eq 'Install') {
-        Assert-WorkstationInstallPlatform
+        $platform = Assert-WorkstationInstallPlatform
     }
     Write-Host "Reviewed catalog: $($manifest.catalogVerifiedOn). Newest means newest in this dated catalog; review vendor pages for updates."
     $results = @()
     foreach ($p in @(Select-WorkstationPackage $manifest.packages | Where-Object { $_.product -in $Products })) {
         $r = [pscustomobject]@{id=$p.id;product=$p.product;version=$p.version;major=$p.major;status='planned';runtimeReadiness='untested';message=$p.notes;sourceUrl=$p.url;requiresAdmin=$p.requiresAdmin;installMethod=$p.installMethod;artifact=$null;exitCode=$null;rebootRequired=$false}
+        if ($platform -and $platform.ProductType -in @(2,3)) {
+            $r.message += ' Windows Server 2022: application/runtime compatibility untested; validate startup and representative models manually.'
+        }
         if ($p.product -eq 'HEC-RAS' -and $p.major -eq 6 -and (Test-WorkstationWindows) -and !(Get-Command wmic.exe -ErrorAction SilentlyContinue)) {
             $r.runtimeReadiness='blocked'; $r.message += ' WMIC missing: https://www.hec.usace.army.mil/confluence/rasdocs/raski/latest/wmic-window-11-os-issue'
         }

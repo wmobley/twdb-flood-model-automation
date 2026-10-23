@@ -259,3 +259,49 @@ Describe 'Installer launch boundary' {
         Should -Invoke Start-Process -Times 0
     }
 }
+
+Describe 'Supported Windows installation platforms' {
+    BeforeEach {
+        Mock Test-WorkstationWindows { $true }
+        $script:testPlatform = [pscustomobject]@{
+            Version=[version]'10.0.20348'; Build=20348; ProductType=3
+            InstallationType='Server'; Is64BitOS=$true; Is64BitProcess=$true; Architecture='AMD64'
+        }
+        Mock Get-WorkstationPlatform { $script:testPlatform }
+    }
+    It 'accepts Server 2022 Desktop Experience including domain controllers' -ForEach @(2,3) {
+        $script:testPlatform.ProductType = $_
+        { Assert-WorkstationInstallPlatform } | Should -Not -Throw
+    }
+    It 'continues accepting Windows 11 clients' {
+        $script:testPlatform.ProductType = 1
+        $script:testPlatform.Build = 22000
+        $script:testPlatform.Version = [version]'10.0.22000'
+        { Assert-WorkstationInstallPlatform } | Should -Not -Throw
+    }
+    It 'rejects Windows 10, other servers, Core, ARM and 32-bit hosts' -ForEach @(
+        @{field='ProductType'; value=1},
+        @{field='Build'; value=17763},
+        @{field='Build'; value=26100},
+        @{field='InstallationType'; value='Server Core'},
+        @{field='Architecture'; value='ARM64'},
+        @{field='Architecture'; value='x86'},
+        @{field='Is64BitProcess'; value=$false},
+        @{field='Is64BitOS'; value=$false},
+        @{field='Version'; value=([version]'6.3.20348')}
+    ) {
+        $script:testPlatform.$field = $value
+        { Assert-WorkstationInstallPlatform } | Should -Throw '*Installation requires*'
+    }
+    It 'reports OS detection failures without accepting the platform' {
+        Mock Get-WorkstationPlatform { throw 'CIM unavailable' }
+        { Assert-WorkstationInstallPlatform } | Should -Throw '*Cannot identify*CIM unavailable*'
+    }
+    It 'includes Server runtime limitations in the installation report' {
+        Mock Read-WorkstationManifest { [pscustomobject]@{catalogVerifiedOn='2026-10-23';packages=@([pscustomobject]@{id='chrome';product='Chrome';version='1.0';major=1;stability='stable';notes='test';url='https://dl.google.com/test.msi';requiresAdmin=$true;installMethod='msi-interactive'});unavailableFamilies=@()} }
+        Mock Get-InstalledPackage { [pscustomobject]@{state='exact';message='present'} }
+        $report = Invoke-Workstation -Mode Install -Products Chrome -ManifestPath 'unused' -CacheDirectory $TestDrive -ReportDirectory $TestDrive -MiniforgeDirectory $TestDrive
+        $report.packages[0].message | Should -Match 'Windows Server 2022.*untested'
+        $report.packages[0].runtimeReadiness | Should -Be 'untested'
+    }
+}

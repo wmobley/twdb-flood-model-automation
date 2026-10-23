@@ -4,10 +4,32 @@ Use `scripts/windows/Install-ModelingWorkstation.ps1` with its accompanying
 `configs/windows/modeling-workstation.json` catalog. Copy the repository to the
 Windows machine; the script is not a standalone file without its catalog.
 
-The target is Windows 11 on an Intel/AMD 64-bit machine. The catalog selects one
+The script accepts Windows 11 or Windows Server 2022 with Desktop Experience
+on an Intel/AMD 64-bit machine, using a 64-bit PowerShell process. The catalog selects one
 stable version per HEC major family, Miniforge (which includes Python and Conda),
 and QGIS long-term release. It excludes previews and beta releases. “Latest” means
 the latest in the dated, reviewed catalog, not a live release lookup.
+
+## Windows Server 2022
+
+Server 2022 is recognized by Windows kernel version 10.0, build 20348,
+server/domain-controller product type, and Desktop Experience installation type.
+Server Core and other Windows Server releases are rejected. OS identity comes from
+`Win32_OperatingSystem` through CIM rather than the PowerShell host's reported OS
+version. Detection failures stop installation before downloads or installer launches.
+
+Accepting the OS does not certify the applications. Install mode emits a server
+warning and includes untested compatibility in each package report message.
+Legacy packages remain manual-required. Verify application startup and representative
+model computations on a disposable Server 2022 VM before using it for modeling.
+[Google's Chrome requirements](https://support.google.com/chrome/a/answer/7100626?hl=en)
+include Windows Server 2016 and later. The reviewed
+[QGIS installation guide](https://www.qgis.org/resources/installation-guide/) and
+[HEC-RAS downloads](https://www.hec.usace.army.mil/software/hec-ras/download.aspx)
+do not establish Server 2022 compatibility for every cataloged package; those
+application/runtime checks remain unverified. Miniforge still requires a normal,
+non-administrator shell, while Chrome, QGIS and HEC require Administrator PowerShell.
+WinGet is not required.
 
 ## Run the script
 
@@ -134,7 +156,7 @@ Do not commit downloaded installers or machine-specific reports.
 
 PowerShell parsing and mocked tests can run on macOS, but they do not validate
 Windows installer execution. Before workstation deployment, test on a disposable
-Windows 11 VM: verify exact installed versions, side-by-side behavior, reruns,
+Windows 11 and Server 2022 Desktop Experience VMs: verify exact installed versions, side-by-side behavior, reruns,
 Python and Conda commands, QGIS startup, and representative HEC computations.
 
 
@@ -145,6 +167,6 @@ policy if it is not available):
 Invoke-Pester -Path .\tests\windows\Install-ModelingWorkstation.Tests.ps1
 ```
 
-Current verification: 31 mocked tests passed and the script parsed under PowerShell
-7.4.6 on macOS. Windows PowerShell 5.1 compatibility is targeted but has not been
+Current verification: all 52 mocked Pester tests passed on macOS, including Chrome
+and Server 2022 platform cases. Windows PowerShell 5.1 compatibility is targeted but has not been
 executed on Windows. No actual application installations were tested in this session.
