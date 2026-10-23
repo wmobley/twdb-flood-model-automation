@@ -65,3 +65,12 @@ None for approved scope.
 “Thats ok, IF i'm minding them we can install them any way”.
 
 Validation: 57 mocked Pester tests passed on macOS. Actual Windows legacy installation remains untested. No deviations from approved scope.
+
+### 2026-10-23 — Assume coexistence across legacy major versions
+
+User approved: “Lets assume the can coexist”. With legacy opt-in, allow manual
+HEC packages alongside only identifiable different-major installations. Same-major
+and unidentified versions stay conflicts. Record assumed coexistence in detection
+messages; do not claim vendor validation. Add registry tests and update guidance.
+
+Coexistence update validation: all 62 mocked Pester tests passed. Same-major and unknown conflicts retained. Actual Windows execution remains untested.

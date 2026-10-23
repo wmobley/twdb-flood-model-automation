@@ -148,7 +148,7 @@ function Get-PackageArtifact {
     return $audit
 }
 function Get-InstalledPackage {
-    param($Package,[string]$MiniforgeDirectory)
+    param($Package,[string]$MiniforgeDirectory,[switch]$AllowLegacyInstallers)
     if (!(Test-WorkstationWindows)) { return [pscustomobject]@{state='absent';message='Detection unavailable on this platform.'} }
     if ($Package.product -eq 'Miniforge') {
         if (!(Test-Path -LiteralPath $MiniforgeDirectory)) { return [pscustomobject]@{state='absent';message='Target directory absent.'} }
@@ -174,14 +174,19 @@ function Get-InstalledPackage {
             if ($v -and (ConvertTo-NormalizedVersion $v) -eq (ConvertTo-NormalizedVersion $Package.version)) { return [pscustomobject]@{state='exact';message="Exact uninstall registration: $($entry.DisplayName) $v"} }
         }
     }
-    # Any existing version is preserved. Even vendor side-by-side support cannot establish local customization safety.
-    if ($entries.Count -and $Package.product -in @('HEC-RAS','HEC-HMS') -and $Package.coexistenceEvidence) {
+    # Same-major and unidentified installations remain conflicts even with attended opt-in.
+    $assumeCoexistence = $AllowLegacyInstallers -and $Package.installMethod -eq 'manual'
+    if ($entries.Count -and $Package.product -in @('HEC-RAS','HEC-HMS') -and ($Package.coexistenceEvidence -or $assumeCoexistence)) {
         $sameMajorOrUnknown = @($entries | Where-Object {
             if ($_.PSObject.Properties.Name -notcontains 'DisplayVersion') { return $true }
             $installed = [regex]::Match([string]$_.DisplayVersion,'\d+(?:\.\d+){1,3}').Value
             return (!$installed -or [int]$installed.Split('.')[0] -eq $Package.major)
         })
-        if (!$sameMajorOrUnknown.Count) { return [pscustomobject]@{state='absent';message='Only other major families detected; vendor documents independent version directories.'} }
+        if (!$sameMajorOrUnknown.Count) {
+            $message = 'Only other major families detected; vendor documents independent version directories.'
+            if ($assumeCoexistence) { $message = 'Only other major families detected; coexistence assumed by user opt-in, not verified. Keep separate installation directories; cancel removal or upgrade prompts.' }
+            return [pscustomobject]@{state='absent';message=$message}
+        }
     }
     if ($entries.Count) { return [pscustomobject]@{state='conflict';message='Other or unidentifiable product installation detected; preserve it and review side-by-side installation manually.'} }
     return [pscustomobject]@{state='absent';message='No matching uninstall registration.'}
@@ -325,7 +330,7 @@ function Invoke-Workstation {
             $r.runtimeReadiness='blocked'; $r.message += ' WMIC missing: https://www.hec.usace.army.mil/confluence/rasdocs/raski/latest/wmic-window-11-os-issue'
         }
         try {
-            $detected = Get-InstalledPackage $p $MiniforgeDirectory
+            $detected = Get-InstalledPackage $p $MiniforgeDirectory -AllowLegacyInstallers:$AllowLegacyInstallers
             $r.message += " $($detected.message)"
             if ($detected.state -eq 'exact') { $r.status='installed-detected' }
             elseif ($Mode -eq 'Plan') { if (($p.installMethod -eq 'manual' -and !$legacyAllowed) -or $detected.state -eq 'conflict') { $r.status='manual-required' } }
@@ -338,7 +343,7 @@ function Invoke-Workstation {
                         $r.exitCode = Install-WorkstationPackage $p $r.artifact $MiniforgeDirectory -AllowLegacyInstallers:$AllowLegacyInstallers
                         $r.rebootRequired = $r.exitCode -in @(3010,1641)
                         if ($r.exitCode -notin @(0,3010,1641)) { throw "Installer returned $($r.exitCode)." }
-                        if ((Get-InstalledPackage $p $MiniforgeDirectory).state -ne 'exact') { throw 'Installer ended but exact installed version could not be verified. Inspect installation manually.' }
+                        if ((Get-InstalledPackage $p $MiniforgeDirectory -AllowLegacyInstallers:$AllowLegacyInstallers).state -ne 'exact') { throw 'Installer ended but exact installed version could not be verified. Inspect installation manually.' }
                         $r.status='installed-verified'
                     }
                 }

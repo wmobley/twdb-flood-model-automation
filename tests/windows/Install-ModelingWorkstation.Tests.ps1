@@ -200,6 +200,32 @@ Describe 'Mode boundaries and completion' {
 }
 
 Describe 'Registry exact-version detection' {
+    It 'requires opt-in to assume legacy coexistence with other major versions' {
+        Mock Test-WorkstationWindows { $true }
+        Mock Get-ItemProperty { [pscustomobject]@{DisplayName='HEC-RAS 7.0.2';DisplayVersion='7.0.2'} }
+        $package = (Read-WorkstationManifest $catalog).packages | Where-Object id -EQ 'hec-ras-2-2'
+        (Get-InstalledPackage $package 'C:\miniforge3').state | Should -Be conflict
+        $result = Get-InstalledPackage $package 'C:\miniforge3' -AllowLegacyInstallers
+        $result.state | Should -Be absent
+        $result.message | Should -Match 'coexistence assumed by user opt-in'
+    }
+    It 'retains exact skips and same-major or unknown conflicts with opt-in' -ForEach @(
+        @{version='2.2'; expected='exact'},
+        @{version='2.1'; expected='conflict'},
+        @{version='unknown'; expected='conflict'}
+    ) {
+        Mock Test-WorkstationWindows { $true }
+        Mock Get-ItemProperty { [pscustomobject]@{DisplayName='HEC-RAS';DisplayVersion=$version} }
+        $package = (Read-WorkstationManifest $catalog).packages | Where-Object id -EQ 'hec-ras-2-2'
+        (Get-InstalledPackage $package 'C:\miniforge3' -AllowLegacyInstallers).state | Should -Be $expected
+    }
+    It 'blocks unidentified registrations even alongside a different major' {
+        Mock Test-WorkstationWindows { $true }
+        Mock Get-ItemProperty { @([pscustomobject]@{DisplayName='HEC-RAS 7';DisplayVersion='7.0.2'}, [pscustomobject]@{DisplayName='HEC-RAS'}) }
+        $package = (Read-WorkstationManifest $catalog).packages | Where-Object id -EQ 'hec-ras-2-2'
+        (Get-InstalledPackage $package 'C:\miniforge3' -AllowLegacyInstallers).state | Should -Be conflict
+    }
+
     It 'detects exact Chrome and checks current-user registrations' {
         Mock Test-WorkstationWindows { $true }
         $package = (Read-WorkstationManifest $catalog).packages | Where-Object product -EQ Chrome

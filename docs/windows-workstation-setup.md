@@ -167,7 +167,7 @@ policy if it is not available):
 Invoke-Pester -Path .\tests\windows\Install-ModelingWorkstation.Tests.ps1
 ```
 
-Current verification: all 57 mocked Pester tests passed on macOS, including Chrome
+Current verification: all 62 mocked Pester tests passed on macOS, including Chrome
 and Server 2022 platform cases. Windows PowerShell 5.1 compatibility is targeted but has not been
 executed on Windows. No actual application installations were tested in this session.
 
@@ -181,10 +181,15 @@ To try older HEC installers, run as Administrator and attend each setup dialog:
 
 This explicitly opts into launching catalog entries marked manual. Without the
 switch they remain download/manual-review only. Plan and DownloadOnly never
-launch installers, including with the switch. Existing detected conflicts remain
-manual-required. Preserve each version's installation directory in setup dialogs.
+launch installers, including with the switch. With this opt-in, legacy HEC coexistence with identifiable different-major
+versions is assumed and recorded in the report. Same-major and unidentified
+versions remain manual-required. Preserve each version's installation directory in setup dialogs.
 
 Some legacy packages lack an independently published checksum or valid signature.
 Attending setup does not establish authenticity or Server compatibility. The report
 records opt-in, original method, artifact hash/signature and installation outcome.
 A successful exit must still pass version detection; model computation stays untested.
+
+Assumed coexistence does not guarantee that shared components, shortcuts or file
+associations stay unchanged. Cancel setup if it proposes removing or upgrading an
+existing version.
