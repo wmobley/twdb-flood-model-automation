@@ -24,6 +24,12 @@ Describe 'Reviewed catalog and selection' {
         $chrome[0].allowedHosts | Should -Contain 'dl.google.com'
         $chrome[0].integrity.sha256 | Should -Match '^[a-f0-9]{64}$'
     }
+    It 'allows the official QGIS redirect mirror and rejects lookalike hosts' {
+        $qgis = (Read-WorkstationManifest $catalog).packages | Where-Object product -EQ QGIS
+        { Assert-AllowedUri -Uri 'https://dl4.qgis.org/downloads/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Not -Throw
+        { Assert-AllowedUri -Uri 'https://dl4.qgis.org.evil.example/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Throw '*Unapproved*'
+        { Assert-AllowedUri -Uri 'https://unreviewed.qgis.org/test.msi' -AllowedHosts $qgis.allowedHosts } | Should -Throw '*Unapproved*'
+    }
     It 'compares numeric versions and excludes newer previews' {
         $packages = @('4.9','4.14','4.99') | ForEach-Object {
             [pscustomobject]@{product='HEC-HMS';major=4;version=$_;stability=$(if ($_ -eq '4.99') {'preview'} else {'stable'})}

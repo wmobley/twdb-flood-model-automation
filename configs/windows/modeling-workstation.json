@@ -268,7 +268,8 @@
       "fileName": "QGIS-OSGeo4W-3.44.15-2.msi",
       "url": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.msi",
       "allowedHosts": [
-        "download.qgis.org"
+        "download.qgis.org",
+        "dl4.qgis.org"
       ],
       "sourcePage": "https://download.qgis.org/downloads/QGIS-OSGeo4W-3.44.15-2.sha256sum",
       "installMethod": "msi-interactive",

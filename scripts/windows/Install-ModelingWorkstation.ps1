@@ -44,7 +44,7 @@ function Read-WorkstationManifest {
     $m = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
     if ($m.schemaVersion -ne 1 -or !$m.catalogVerifiedOn -or !$m.packages) { throw 'Unsupported or incomplete manifest.' }
     $ids = @()
-    $trusted = @('github.com','release-assets.githubusercontent.com','www.hec.usace.army.mil','download.qgis.org','dl.google.com')
+    $trusted = @('github.com','release-assets.githubusercontent.com','www.hec.usace.army.mil','download.qgis.org','dl4.qgis.org','dl.google.com')
     foreach ($p in $m.packages) {
         if ($p.id -notmatch '^[a-z0-9-]+$' -or $p.id -in $ids) { throw 'Invalid or duplicate package ID.' }
         $ids += $p.id
