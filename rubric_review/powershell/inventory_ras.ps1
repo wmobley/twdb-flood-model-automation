@@ -25,6 +25,8 @@ foreach ($prj in Get-ChildItem -LiteralPath $Root -Recurse -File -Filter '*.prj'
             title = Get-Key $lines 'Plan Title'; shortId = Get-Key $lines 'Short Identifier'
             geomFile = $geom; geomExists = [bool]($geom -and (Test-Path -LiteralPath (Join-Path $dir "$base.$geom")))
             flowFile = $flow; flowExists = [bool]($flow -and (Test-Path -LiteralPath (Join-Path $dir "$base.$flow")))
+            flowText = if ($flow -and (Test-Path -LiteralPath (Join-Path $dir "$base.$flow"))) {
+                (Get-Content -LiteralPath (Join-Path $dir "$base.$flow") | Where-Object { $_ -match '^[A-Za-z]' } | Select-Object -First 150) -join "`n" } else { '' }
             flowTitle = if ($flow -and (Test-Path -LiteralPath (Join-Path $dir "$base.$flow"))) {
                 Get-Key (Get-Content -LiteralPath (Join-Path $dir "$base.$flow") -TotalCount 20) 'Flow Title' } else { '' }
         }

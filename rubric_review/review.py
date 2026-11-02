@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from .checklist import ChecklistGroup
+from .events import find_events
 
 Call = Callable[..., Any]
 
@@ -23,6 +24,7 @@ class ReviewOptions:
     hms_version: str | None = None  # None = highest installed
     project_area_shapefile: str | None = None  # file name the Grant Agreement area shapefile must have
     timeout_min: int = 60
+    expected_events: list[str] = field(default_factory=list)  # Scope of Work events, e.g. ["10-yr", "25-yr"]
 
 
 @dataclass
@@ -34,6 +36,7 @@ class ItemResult:
     run: str
     status: str | None  # "Y" | "N" | "N/A" | None (reviewer must decide)
     comment: str
+    figure: str | None = None
 
 
 @dataclass
@@ -41,6 +44,7 @@ class ReviewOutcome:
     results: list[ItemResult]
     environment: dict[str, Any]
     executions: list[dict[str, Any]] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)  # one row per model/run: {"model","run","found":{event:bool}}
 
 
 def norm(text: str) -> str:
@@ -66,7 +70,8 @@ def _find_ras(projects: list[dict], model: str, plan: str) -> tuple[dict | None,
     wanted = norm(model)
     candidates = [p for p in projects if wanted in (norm(p["title"]), norm(p["base"]))]
     if not candidates:
-        return None, None, f"No HEC-RAS project titled '{model}' found under the models root"
+        found = ", ".join(sorted(p["title"] or p["base"] for p in projects)) or "none"
+        return None, None, f"No HEC-RAS project titled '{model}' found under the models root; projects found: {found}"
     for project in candidates:
         for pl in project["plans"]:
             if norm(plan) in (norm(pl["title"]), norm(pl["shortId"])):
@@ -79,7 +84,8 @@ def _find_hms(projects: list[dict], model: str, run: str) -> tuple[dict | None, 
     wanted = norm(model)
     candidates = [p for p in projects if norm(p["name"]) == wanted]
     if not candidates:
-        return None, None, f"No HEC-HMS project named '{model}' found under the models root"
+        found = ", ".join(sorted(p["name"] for p in projects)) or "none"
+        return None, None, f"No HEC-HMS project named '{model}' found under the models root; projects found: {found}"
     for project in candidates:
         for r in project["runs"]:
             if norm(run) == norm(r["name"]):
@@ -144,7 +150,30 @@ def _area(shapes: list[tuple[str, bool]], wanted: str | None, where: str) -> tup
     return "N", f"No shapefile{need} that exists is referenced by {where} (references: {listed})"
 
 
-def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) -> ReviewOutcome:
+def _events(group: ChecklistGroup, project: dict, unit: dict, expected: list[str], rows: list[dict]) -> tuple[str | None, str]:
+    """Y when every Scope of Work event is represented. HMS: each event needs a run; RAS: the plan's own text must name it."""
+    if group.tool == "hms":
+        found = find_events(" | ".join(r["name"] for r in project["runs"]), expected)
+        where = f"runs in project ({', '.join(r['name'] for r in project['runs'])})"
+    else:
+        text = " | ".join([unit["title"], unit["shortId"], unit["flowTitle"], unit["flowText"]])
+        found = find_events(text, expected)
+        where = f"plan '{unit['title']}' / flow file .{unit['flowFile']}"
+    if not any(r["model"] == group.model_name and r["run"] == group.run_name for r in rows):
+        rows.append({"model": group.model_name, "run": group.run_name, "tool": group.tool, "found": found})
+    missing = [e for e, ok in found.items() if not ok]
+    if not missing:
+        return "Y", f"All {len(expected)} Scope of Work events found in {where}."
+    if group.tool == "ras":
+        elsewhere = {e for pl in project["plans"] if pl is not unit
+                     for e, ok in find_events(" | ".join([pl["title"], pl["shortId"], pl["flowTitle"], pl["flowText"]]), missing).items() if ok}
+        extra = f" Found only in other plans of this project: {', '.join(sorted(elsewhere))}." if elsewhere else ""
+    else:
+        extra = ""
+    return "N", f"Events not found in {where}: {', '.join(missing)}.{extra}"
+
+
+def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions, geo: Any = None) -> ReviewOutcome:
     software = call("inventory_software.ps1")
     ras_projects = call("inventory_ras.ps1", Root=opts.models_root)
     hms_projects = call("inventory_hms.ps1", Root=opts.models_root)
@@ -153,6 +182,7 @@ def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) ->
 
     results: list[ItemResult] = []
     executions: list[dict] = []
+    event_rows: list[dict] = []
     for group in groups:
         if group.tool == "ras":
             project, unit, problem = _find_ras(ras_projects, group.model_name, group.run_name)
@@ -161,6 +191,7 @@ def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) ->
 
         computed: tuple[str | None, str] | None = None  # compute once per group
         for item in group.items:
+            figure = None
             if unit is None:
                 status, comment = "N", problem
             elif item.kind == "runs":
@@ -170,6 +201,8 @@ def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) ->
                     else:
                         computed = _hms_run(call, hms_install, project, unit, opts, executions)
                 status, comment = computed
+            elif item.kind == "events" and opts.expected_events:
+                status, comment = _events(group, project, unit, opts.expected_events, event_rows)
             elif item.kind == "events":
                 if group.tool == "ras":
                     detail = f"flow file .{unit['flowFile']} '{unit['flowTitle']}'" if unit["flowExists"] else "flow file missing"
@@ -181,13 +214,21 @@ def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) ->
                 if group.tool == "ras":
                     shapes = [(s["ref"], s["exists"]) for s in project["shapefiles"]]
                     status, comment = _area(shapes, opts.project_area_shapefile, f"{project['base']}.rasmap")
+                    if geo is not None:
+                        geo_result = geo.check_ras(project, unit)
+                        figure = geo_result.figure
+                        if geo_result.status is None:
+                            comment += f" Footprint check unavailable: {geo_result.comment}"
+                        else:
+                            status = "Y" if (status == "Y" and geo_result.status == "Y") else "N"
+                            comment = f"{geo_result.comment} Map layer: {comment}"
                 else:
                     on_disk = set(project["shpOnDisk"])
                     shapes = [(s["ref"], s["ref"].replace("\\", "/").rsplit("/", 1)[-1] in on_disk) for s in project["shapefiles"]]
                     status, comment = _area(shapes, opts.project_area_shapefile, f"HMS project {project['name']}")
             else:
                 status, comment = None, "No automated check for this item."
-            results.append(ItemResult(item.item_no, item.row, item.kind, group.model_name, group.run_name, status, comment))
+            results.append(ItemResult(item.item_no, item.row, item.kind, group.model_name, group.run_name, status, comment, figure))
 
     environment = {
         "computer": software["computer"], "user": software["user"],
@@ -197,4 +238,4 @@ def run_review(call: Call, groups: list[ChecklistGroup], opts: ReviewOptions) ->
         "ras_projects_found": len(ras_projects), "hms_projects_found": len(hms_projects),
         "models_root": opts.models_root, "run_models": opts.run_models,
     }
-    return ReviewOutcome(results, environment, executions)
+    return ReviewOutcome(results, environment, executions, event_rows)

@@ -103,3 +103,98 @@ def test_unsafe_remote_argument_rejected():
     with pytest.raises(ValueError):
         _check_arg('C:\\x" ; calc')
     assert _check_arg(r"C:\Users\dynamo\My Models") == r"C:\Users\dynamo\My Models"
+
+
+# ---- Scope of Work events -------------------------------------------------------------------------------------
+
+def test_event_matching_handles_return_periods_and_annual_chance():
+    from rubric_review.events import find_events
+
+    text = "Ray 10-yr | Q25yr | 50 year storm | 1% AEP | 2%"
+    assert find_events(text, ["10-yr", "25-yr", "50-yr", "100-yr"]) == {"10-yr": True, "25-yr": True, "50-yr": True, "100-yr": True}
+    assert find_events("100yr only", ["10-yr", "100-yr"]) == {"10-yr": False, "100-yr": True}  # 100yr is not 10yr
+
+
+def test_hms_events_need_a_run_for_every_expected_event():
+    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.tool == "hms"][:1]
+    runs = [{"name": n, "basin": "b", "met": "m", "control": "c"} for n in ("10-yr", "25yr", "100yr")]
+    hms = [{"hms": r"C:\m\p.hms", "dir": r"C:\m", "name": "P921_01_Ray_Watershed_Studyv3_2_21_25", "runs": runs, "shapefiles": [], "shpOnDisk": []}]
+    opts = ReviewOptions(models_root="x", expected_events=["10-yr", "25-yr", "50-yr", "100-yr"])
+    out = run_review(_fake_call([], hms), groups, opts)
+    events_item = out.results[1]
+    assert events_item.status == "N" and "50-yr" in events_item.comment
+    assert out.events[0]["found"] == {"10-yr": True, "25-yr": True, "50-yr": False, "100-yr": True}
+
+
+def test_ras_events_read_plan_and_flow_text_and_report_matrix(tmp_path):
+    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
+    plan = {**_plan("Default Scenario"), "flowText": "Flow Title=Existing\nProfile Names=10-yr,25-yr,100-yr"}
+    project = _ras_project("HEC-RAS Model (Outfall A - Existing)", plan)
+    opts = ReviewOptions(models_root="x", expected_events=["10-yr", "25-yr", "100-yr"])
+    out = run_review(_fake_call([project], []), groups, opts)
+    assert out.results[1].status == "Y"
+    opts = ReviewOptions(models_root="x", expected_events=["10-yr", "50-yr"])
+    out = run_review(_fake_call([project], []), groups, opts)
+    assert out.results[1].status == "N" and "50-yr" in out.results[1].comment
+    html = write_html_report(out, tmp_path / "r.html", "t", "h").read_text()
+    assert "Scope of Work events" in html and "✘" in html
+
+
+# ---- Project-area footprint -----------------------------------------------------------------------------------
+
+def _make_geometry(tmp_path, perimeter):
+    import h5py
+    import numpy as np
+
+    hdf = tmp_path / "M.g01.hdf"
+    with h5py.File(hdf, "w") as f:
+        f.create_group("Geometry/2D Flow Areas/Area1").create_dataset("Perimeter", data=np.array(perimeter, float))
+    return hdf
+
+
+def _area_shapefile(tmp_path, box):
+    import geopandas as gpd
+    from shapely.geometry import box as shp_box
+
+    path = tmp_path / "GrantArea.shp"
+    gpd.GeoDataFrame({"id": [1]}, geometry=[shp_box(*box)]).to_file(path)
+    return path
+
+
+def test_footprint_coverage_pass_fail_and_figure(tmp_path):
+    pytest.importorskip("geopandas")
+    pytest.importorskip("h5py")
+    from rubric_review.geo import LocalGeo
+
+    _make_geometry(tmp_path, [(0, 0), (100, 0), (100, 100), (0, 100)])
+    project = {"dir": str(tmp_path), "base": "M"}
+    plan = {"geomFile": "g01", "title": "Plan 1"}
+
+    inside = LocalGeo(_area_shapefile(tmp_path, (10, 10, 90, 90)), tmp_path / "fig").check_ras(project, plan)
+    assert inside.status == "Y" and "100%" in inside.comment and Path(inside.figure).exists()
+
+    partial = LocalGeo(_area_shapefile(tmp_path, (50, 50, 150, 150)), tmp_path / "fig").check_ras(project, plan)
+    assert partial.status == "N" and "25%" in partial.comment
+
+    missing = LocalGeo(_area_shapefile(tmp_path, (0, 0, 1, 1)), tmp_path).check_ras({"dir": str(tmp_path), "base": "X"}, plan)
+    assert missing.status is None
+
+
+def test_area_item_requires_both_footprint_and_rasmap_layer():
+    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
+
+    class FakeGeo:
+        def __init__(self, status):
+            self.status = status
+
+        def check_ras(self, project, plan):
+            from rubric_review.geo import GeoResult
+            return GeoResult(self.status, "geo comment", "fig.png")
+
+    layer = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"))
+    nolayer = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"), shapes=[])
+    run = lambda proj, geo: run_review(_fake_call([proj], []), groups, ReviewOptions(models_root="x"), geo=geo).results[2]
+    assert run(layer, FakeGeo("Y")).status == "Y" and run(layer, FakeGeo("Y")).figure == "fig.png"
+    assert run(layer, FakeGeo("N")).status == "N"
+    assert run(nolayer, FakeGeo("Y")).status == "N"
+    assert run(layer, FakeGeo(None)).status == "Y"  # footprint unavailable: falls back to the map-layer check
