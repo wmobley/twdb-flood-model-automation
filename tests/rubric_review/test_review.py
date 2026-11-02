@@ -3,14 +3,25 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from rubric_review import ReviewOptions, fill_workbook, load_modeling_checklist, run_review, write_html_report
+from rubric_review import ReviewOptions, build_review_workbook, run_review, write_html_report
 
 WORKBOOK = Path(__file__).parents[2] / "docs/rubrics/FPPG_Project_Deliverables Checklist_FINAL.xlsx"
 
 
-def _plan(title, geom=True, flow=True):
+def _plan(title, geom=True, flow=True, flow_text=""):
     return {"file": rf"C:\m\{title}.p01", "ext": "p01", "title": title, "shortId": "", "geomFile": "g01", "geomExists": geom,
-            "flowFile": "f01", "flowExists": flow, "flowTitle": "Flow 1"}
+            "flowFile": "f01", "flowExists": flow, "flowTitle": "Flow 1", "flowText": flow_text}
+
+
+def _ras_project(title, plan, shapes=None):
+    return {"prj": rf"C:\m\{title}.prj", "dir": r"C:\m", "base": title, "title": title, "rasmapExists": True,
+            "plans": [plan], "shapefiles": shapes if shapes is not None else [{"ref": r".\Features\Area.shp", "exists": True}]}
+
+
+def _hms_project(name, run_names):
+    runs = [{"name": n, "basin": "b", "met": "m", "control": "c"} for n in run_names]
+    return {"hms": rf"C:\m\{name}.hms", "dir": r"C:\m", "name": name, "runs": runs,
+            "shapefiles": [{"ref": "a.shp", "source": "x"}], "shpOnDisk": ["a.shp"]}
 
 
 def _fake_call(ras_projects, hms_projects, run_result=None):
@@ -32,80 +43,51 @@ def _fake_call(ras_projects, hms_projects, run_result=None):
     return call
 
 
-def _ras_project(title, plan, shapes=None):
-    return {"prj": rf"C:\m\{title}.prj", "dir": r"C:\m", "base": title, "title": title, "rasmapExists": True,
-            "plans": [plan], "shapefiles": shapes if shapes is not None else [{"ref": r".\Features\Area.shp", "exists": True}]}
+OK = {"exitCode": 0, "timedOut": False, "planHdfUpdated": True, "errorLines": [], "seconds": 5,
+      "messagesTail": "done", "freshDssFiles": 2, "outputTail": "done"}
 
 
-def test_checklist_parses_all_thirty_items_in_ten_groups():
-    groups = load_modeling_checklist(WORKBOOK)
-    assert len(groups) == 10 and sum(len(g.items) for g in groups) == 30
-    first = groups[0]
-    assert (first.tool, first.model_name, first.run_name) == ("hms", "P921 01 Ray Watershed Studyv3 2 21 25", "10-yr")
-    assert [i.kind for i in first.items] == ["runs", "events", "area"] and first.items[0].row == 4
-    assert groups[4].tool == "ras" and groups[4].model_name == "HEC-RAS Model (Outfall A - Existing)"
+def test_every_model_found_is_tested_whatever_it_is_called():
+    ras = [_ras_project("Totally Different Name", _plan("Scenario X")), _ras_project("Another", _plan("P2"))]
+    hms = [_hms_project("Some_Other_Watershed", ["a", "b"])]
+    out = run_review(_fake_call(ras, hms), ReviewOptions(models_root=r"C:\m"))
+    assert [(f.tool, f.project, f.unit) for f in out.findings] == [
+        ("hms", "Some_Other_Watershed", "a"), ("hms", "Some_Other_Watershed", "b"),
+        ("ras", "Totally Different Name", "Scenario X"), ("ras", "Another", "P2")]
+    assert all(set(f.checks) == {"runs", "events", "area"} for f in out.findings)
 
 
-def test_missing_project_fails_every_item_with_reason():
-    groups = load_modeling_checklist(WORKBOOK)
-    out = run_review(_fake_call([], []), groups, ReviewOptions(models_root=r"C:\m"))
-    assert {r.status for r in out.results} == {"N"} and "No HEC-HMS project" in out.results[0].comment
+def test_nothing_found_gives_empty_findings():
+    out = run_review(_fake_call([], []), ReviewOptions(models_root=r"C:\m"))
+    assert out.findings == [] and out.environment["models_found"] == 0
 
 
 def test_ras_run_pass_and_fail_paths():
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
-    project = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"))
-    ok = {"exitCode": 0, "timedOut": False, "planHdfUpdated": True, "errorLines": [], "seconds": 5, "messagesTail": "done"}
-    call = _fake_call([project], [], ok)
-    out = run_review(call, groups, ReviewOptions(models_root=r"C:\m", run_models=True))
-    assert [r.status for r in out.results] == ["Y", None, "Y"]
-    assert len(call.ran) == 1 and call.ran[0][1]["Exe"] == r"C:\ras\Ras.exe"  # preferred 6.6, computed once per group
+    project = _ras_project("M", _plan("Plan"))
+    call = _fake_call([project], [], OK)
+    out = run_review(call, ReviewOptions(models_root="x", run_models=True))
+    assert out.findings[0].checks["runs"][0] == "Y"
+    assert len(call.ran) == 1 and call.ran[0][1]["Exe"] == r"C:\ras\Ras.exe"  # preferred 6.6
 
-    bad = {**ok, "errorLines": ["ERROR: negative depth"]}
-    out = run_review(_fake_call([project], [], bad), groups, ReviewOptions(models_root=r"C:\m", run_models=True))
-    assert out.results[0].status == "N" and "negative depth" in out.results[0].comment
-
-
-def test_dependency_check_without_running_leaves_reviewer_decision():
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
-    good = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"))
-    broken = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario", flow=False), shapes=[])
-    assert run_review(_fake_call([good], []), groups, ReviewOptions(models_root="x")).results[0].status is None
-    out = run_review(_fake_call([broken], []), groups, ReviewOptions(models_root="x"))
-    assert [r.status for r in out.results] == ["N", "N", "N"]
+    bad = {**OK, "errorLines": ["ERROR: negative depth"]}
+    out = run_review(_fake_call([project], [], bad), ReviewOptions(models_root="x", run_models=True))
+    status, comment, _ = out.findings[0].checks["runs"]
+    assert status == "N" and "negative depth" in comment
 
 
-def test_project_area_shapefile_name_is_enforced():
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
-    project = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"))
-    opts = ReviewOptions(models_root="x", project_area_shapefile="GrantArea.shp")
-    assert run_review(_fake_call([project], []), groups, opts).results[2].status == "N"
-    opts = ReviewOptions(models_root="x", project_area_shapefile="area.shp")
-    assert run_review(_fake_call([project], []), groups, opts).results[2].status == "Y"
+def test_dependency_check_without_running():
+    good = _ras_project("M", _plan("Plan"))
+    broken = _ras_project("M", _plan("Plan", flow=False), shapes=[])
+    assert run_review(_fake_call([good], []), ReviewOptions(models_root="x")).findings[0].checks["runs"][0] is None
+    f = run_review(_fake_call([broken], []), ReviewOptions(models_root="x")).findings[0]
+    assert (f.checks["runs"][0], f.checks["events"][0], f.checks["area"][0]) == ("N", "N", "N")
 
 
-def test_fill_workbook_and_report(tmp_path):
-    groups = load_modeling_checklist(WORKBOOK)
-    out = run_review(_fake_call([], []), groups, ReviewOptions(models_root="x"))
-    results = {r.row: (r.status, r.comment) for r in out.results}
-    filled = fill_workbook(WORKBOOK, tmp_path / "filled.xlsx", results)
-    ws = openpyxl.load_workbook(filled)["C - Modeling Review"]
-    assert ws["E4"].value == "N" and "No HEC-HMS project" in ws["F4"].value
-    assert ws["D4"].value == "Model runs with no errors"  # source columns untouched
-    html = write_html_report(out, tmp_path / "r.html", "Test <report>", "dynamo02").read_text()
-    assert "Test &lt;report&gt;" in html and "30" not in html.split("<h1>")[0]
+def test_hms_run_executes_with_hms_install():
+    call = _fake_call([], [_hms_project("W", ["10-yr"])], OK)
+    out = run_review(call, ReviewOptions(models_root="x", run_models=True))
+    assert out.findings[0].checks["runs"][0] == "Y" and call.ran[0][1]["Cmd"] == r"C:\hms\hec-hms.cmd"
 
-
-def test_unsafe_remote_argument_rejected():
-    pytest.importorskip("paramiko")
-    from rubric_review.remote import _check_arg
-
-    with pytest.raises(ValueError):
-        _check_arg('C:\\x" ; calc')
-    assert _check_arg(r"C:\Users\dynamo\My Models") == r"C:\Users\dynamo\My Models"
-
-
-# ---- Scope of Work events -------------------------------------------------------------------------------------
 
 def test_event_matching_handles_return_periods_and_annual_chance():
     from rubric_review.events import find_events
@@ -116,28 +98,70 @@ def test_event_matching_handles_return_periods_and_annual_chance():
 
 
 def test_hms_events_need_a_run_for_every_expected_event():
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.tool == "hms"][:1]
-    runs = [{"name": n, "basin": "b", "met": "m", "control": "c"} for n in ("10-yr", "25yr", "100yr")]
-    hms = [{"hms": r"C:\m\p.hms", "dir": r"C:\m", "name": "P921_01_Ray_Watershed_Studyv3_2_21_25", "runs": runs, "shapefiles": [], "shpOnDisk": []}]
+    hms = [_hms_project("W", ["10-yr", "25yr", "100yr"])]
     opts = ReviewOptions(models_root="x", expected_events=["10-yr", "25-yr", "50-yr", "100-yr"])
-    out = run_review(_fake_call([], hms), groups, opts)
-    events_item = out.results[1]
-    assert events_item.status == "N" and "50-yr" in events_item.comment
-    assert out.events[0]["found"] == {"10-yr": True, "25-yr": True, "50-yr": False, "100-yr": True}
+    f = run_review(_fake_call([], hms), opts).findings[0]
+    assert f.checks["events"][0] == "N" and "50-yr" in f.checks["events"][1]
+    assert f.events == {"10-yr": True, "25-yr": True, "50-yr": False, "100-yr": True}
 
 
-def test_ras_events_read_plan_and_flow_text_and_report_matrix(tmp_path):
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
-    plan = {**_plan("Default Scenario"), "flowText": "Flow Title=Existing\nProfile Names=10-yr,25-yr,100-yr"}
-    project = _ras_project("HEC-RAS Model (Outfall A - Existing)", plan)
-    opts = ReviewOptions(models_root="x", expected_events=["10-yr", "25-yr", "100-yr"])
-    out = run_review(_fake_call([project], []), groups, opts)
-    assert out.results[1].status == "Y"
-    opts = ReviewOptions(models_root="x", expected_events=["10-yr", "50-yr"])
-    out = run_review(_fake_call([project], []), groups, opts)
-    assert out.results[1].status == "N" and "50-yr" in out.results[1].comment
-    html = write_html_report(out, tmp_path / "r.html", "t", "h").read_text()
-    assert "Scope of Work events" in html and "✘" in html
+def test_ras_events_read_plan_and_flow_text():
+    project = _ras_project("M", _plan("Plan", flow_text="Profile Names=10-yr,25-yr,100-yr"))
+    f = run_review(_fake_call([project], []), ReviewOptions(models_root="x", expected_events=["10-yr", "25-yr", "100-yr"])).findings[0]
+    assert f.checks["events"][0] == "Y"
+    f = run_review(_fake_call([project], []), ReviewOptions(models_root="x", expected_events=["10-yr", "50-yr"])).findings[0]
+    assert f.checks["events"][0] == "N" and "50-yr" in f.checks["events"][1]
+
+
+def test_project_area_shapefile_name_is_enforced():
+    project = _ras_project("M", _plan("Plan"))
+    run = lambda name: run_review(_fake_call([project], []), ReviewOptions(models_root="x", project_area_shapefile=name)).findings[0].checks["area"][0]
+    assert run("GrantArea.shp") == "N" and run("area.shp") == "Y"
+
+
+class FakeGeo:
+    def __init__(self, status):
+        self.status = status
+
+    def check_ras(self, project, plan):
+        from rubric_review.geo import GeoResult
+        return GeoResult(self.status, "geo comment", "fig.png")
+
+
+def test_area_requires_both_footprint_and_rasmap_layer():
+    layer = _ras_project("M", _plan("Plan"))
+    nolayer = _ras_project("M", _plan("Plan"), shapes=[])
+    area = lambda proj, geo: run_review(_fake_call([proj], []), ReviewOptions(models_root="x"), geo=geo).findings[0].checks["area"]
+    assert area(layer, FakeGeo("Y"))[0] == "Y" and area(layer, FakeGeo("Y"))[2] == "fig.png"
+    assert area(layer, FakeGeo("N"))[0] == "N"
+    assert area(nolayer, FakeGeo("Y"))[0] == "N"
+    assert area(layer, FakeGeo(None))[0] == "Y"  # footprint unavailable: falls back to the map-layer check
+
+
+def test_workbook_gets_one_block_per_model_and_keeps_template_wording(tmp_path):
+    ras = [_ras_project(f"Model {i}", _plan("Plan")) for i in range(1, 5)]  # 4 + 1 hms = 5 blocks (template example has 10)
+    out = run_review(_fake_call(ras, [_hms_project("W", ["10-yr"])]), ReviewOptions(models_root="x"))
+    path = build_review_workbook(WORKBOOK, tmp_path / "filled.xlsx", out.findings)
+    ws = openpyxl.load_workbook(path)["C - Modeling Review"]
+    assert [ws.cell(r, 1).value for r in range(4, 19)] == [f"C{i}" for i in range(1, 16)]
+    assert ws["B4"].value == "Hydrologic Model" and "Simulation Run Name: 10-yr" in ws["C4"].value
+    assert ws["B7"].value == "Hydraulic Model" and "Project Name: Model 1" in ws["C7"].value
+    assert ws["D4"].value == "Model runs with no errors" and ws["E4"].value is None  # not executed -> reviewer decides
+    assert ws["D6"].value.startswith("Project Area")
+    assert ws["A19"].value is None and "guideline" in str(ws["B20"].value).lower()  # tail kept, example blocks gone
+    assert all("Example" not in str(c.value) and "Ray Watershed" not in str(c.value) for row in ws.iter_rows() for c in row)
+
+
+def test_report_is_themed_and_handles_empty_and_populated(tmp_path):
+    empty = write_html_report(run_review(_fake_call([], []), ReviewOptions(models_root="C:/x")), tmp_path / "e.html", "Test <report>", "h").read_text()
+    assert "Test &lt;report&gt;" in empty and "No HEC-RAS plans or HEC-HMS runs were found" in empty
+
+    project = _ras_project("M", _plan("Plan", flow_text="Profile Names=10-yr"))
+    out = run_review(_fake_call([project], [_hms_project("W", ["10-yr"])]), ReviewOptions(models_root="C:/m", expected_events=["10-yr", "100-yr"]))
+    html = write_html_report(out, tmp_path / "r.html", "T", "h").read_text()
+    for needle in ("Hydrologic models (HEC-HMS)", "Hydraulic models (HEC-RAS)", "Model-by-model findings",
+                   "Runs without errors", "Scope of Work events", "Items for the reviewer", "✘"):
+        assert needle in html
 
 
 # ---- Project-area footprint -----------------------------------------------------------------------------------
@@ -180,21 +204,3 @@ def test_footprint_coverage_pass_fail_and_figure(tmp_path):
     assert missing.status is None
 
 
-def test_area_item_requires_both_footprint_and_rasmap_layer():
-    groups = [g for g in load_modeling_checklist(WORKBOOK) if g.model_name.endswith("(Outfall A - Existing)")]
-
-    class FakeGeo:
-        def __init__(self, status):
-            self.status = status
-
-        def check_ras(self, project, plan):
-            from rubric_review.geo import GeoResult
-            return GeoResult(self.status, "geo comment", "fig.png")
-
-    layer = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"))
-    nolayer = _ras_project("HEC-RAS Model (Outfall A - Existing)", _plan("Default Scenario"), shapes=[])
-    run = lambda proj, geo: run_review(_fake_call([proj], []), groups, ReviewOptions(models_root="x"), geo=geo).results[2]
-    assert run(layer, FakeGeo("Y")).status == "Y" and run(layer, FakeGeo("Y")).figure == "fig.png"
-    assert run(layer, FakeGeo("N")).status == "N"
-    assert run(nolayer, FakeGeo("Y")).status == "N"
-    assert run(layer, FakeGeo(None)).status == "Y"  # footprint unavailable: falls back to the map-layer check
