@@ -16,7 +16,7 @@ def _patterns(event: str) -> list[re.Pattern]:
     pct_text = str(int(pct)) if pct == int(pct) else f"{pct:.1f}".rstrip("0").rstrip(".")
     return [
         re.compile(rf"(?<!\d){years}[\s_\-]*(?:yr|year)s?\b", re.I),
-        re.compile(rf"(?<![\d.]){re.escape(pct_text)}\s*(?:%|percent|[\s_\-]*pct)", re.I),
+        re.compile(rf"(?<![\d.])0*{re.escape(pct_text)}\s*(?:%|percent|[\s_\-]*pct)", re.I),
     ]
 
 

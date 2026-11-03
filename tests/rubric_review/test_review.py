@@ -24,8 +24,10 @@ def _hms_project(name, run_names):
             "shapefiles": [{"ref": "a.shp", "source": "x"}], "shpOnDisk": ["a.shp"]}
 
 
-def _fake_call(ras_projects, hms_projects, run_result=None):
+def _fake_call(ras_projects, hms_projects, run_result=None, polls=None):
+    """``polls`` = states returned by successive poll_run.ps1 calls; the last is the finished ``run_result``."""
     ran = []
+    pending = list(polls or [])
 
     def call(script, timeout=None, **params):
         if script == "inventory_software.ps1":
@@ -38,13 +40,19 @@ def _fake_call(ras_projects, hms_projects, run_result=None):
         if script == "inventory_hms.ps1":
             return hms_projects
         ran.append((script, params))
-        return run_result
+        if script == "start_run.ps1":
+            return {"runDir": r"C:\tmp\run", "processId": 4242, "startedUtc": "2026-11-03T00:00:00.0000000Z", "projectDir": r"C:\m"}
+        if script == "poll_run.ps1":
+            return pending.pop(0) if pending else run_result
+        return {"stopped": True}
     call.ran = ran
     return call
 
 
-OK = {"exitCode": 0, "timedOut": False, "planHdfUpdated": True, "errorLines": [], "seconds": 5,
-      "messagesTail": "done", "freshDssFiles": 2, "outputTail": "done"}
+OK = {"running": False, "exitCode": 0, "planHdfUpdated": True, "errorLines": [], "seconds": 5, "lastFile": "", "lastFileAgo": None,
+      "processes": [], "progressTail": [], "messagesTail": "done", "freshDssFiles": 2}
+BUSY = {**OK, "running": True, "exitCode": None, "seconds": 20, "lastFile": "a.hdf", "lastFileAgo": 3,
+        "processes": ["Ras.exe (cpu 7s)"], "progressTail": ["Step 12 of 40"]}
 
 
 def test_every_model_found_is_tested_whatever_it_is_called():
@@ -67,12 +75,52 @@ def test_ras_run_pass_and_fail_paths():
     call = _fake_call([project], [], OK)
     out = run_review(call, ReviewOptions(models_root="x", run_models=True))
     assert out.findings[0].checks["runs"][0] == "Y"
-    assert len(call.ran) == 1 and call.ran[0][1]["Exe"] == r"C:\ras\Ras.exe"  # preferred 6.6
+    assert [name for name, _ in call.ran] == ["start_run.ps1", "poll_run.ps1"] and call.ran[0][0] == "start_run.ps1" and call.ran[0][1]["Exe"] == r"C:\ras\Ras.exe"  # preferred 6.6
 
     bad = {**OK, "errorLines": ["ERROR: negative depth"]}
     out = run_review(_fake_call([project], [], bad), ReviewOptions(models_root="x", run_models=True))
     status, comment, _ = out.findings[0].checks["runs"]
     assert status == "N" and "negative depth" in comment
+
+
+def test_compute_is_polled_without_a_time_limit_and_reports_progress():
+    messages = []
+    call = _fake_call([_ras_project("M", _plan("Plan"))], [], OK, polls=[BUSY, BUSY, BUSY])
+    out = run_review(call, ReviewOptions(models_root="x", run_models=True, poll_seconds=0, progress=messages.append))
+    assert out.findings[0].checks["runs"][0] == "Y"
+    assert [name for name, _ in call.ran].count("poll_run.ps1") == 4  # three busy, one finished
+    assert any("running 0:20" in m and "Ras.exe (cpu 7s)" in m and "Step 12 of 40" in m for m in messages)
+    assert any("[1/1] Testing RAS" in m for m in messages) and any("finished after 0:05" in m for m in messages)
+
+
+def test_poll_log_is_written_when_a_log_dir_is_given(tmp_path):
+    call = _fake_call([_ras_project("M", _plan("Plan"))], [], OK, polls=[BUSY])
+    run_review(call, ReviewOptions(models_root="x", run_models=True, poll_seconds=0, log_dir=tmp_path / "logs"))
+    (log,) = (tmp_path / "logs").glob("*.jsonl")
+    rows = [__import__("json").loads(line) for line in log.read_text().splitlines()]
+    assert [r["running"] for r in rows] == [True, False] and rows[0]["lastFile"] == "a.hdf"
+    assert all(params["Probe"] == 1 for name, params in call.ran if name == "poll_run.ps1")
+
+
+def test_interrupting_a_compute_stops_the_vm_process():
+    call = _fake_call([_ras_project("M", _plan("Plan"))], [], OK, polls=[BUSY])
+    original = call
+
+    def interrupting(script, timeout=None, **params):
+        if script == "poll_run.ps1" and len([r for r in original.ran if r[0] == "poll_run.ps1"]) == 1:
+            raise KeyboardInterrupt
+        return original(script, timeout, **params)
+
+    interrupting.ran = original.ran
+    with pytest.raises(KeyboardInterrupt):
+        run_review(interrupting, ReviewOptions(models_root="x", run_models=True, poll_seconds=0))
+    assert ("stop_run.ps1", {"ProcessId": 4242}) in original.ran
+
+
+def test_process_ending_without_exit_code_is_left_to_the_reviewer():
+    gone = {**OK, "exitCode": None}
+    out = run_review(_fake_call([_ras_project("M", _plan("Plan"))], [], gone), ReviewOptions(models_root="x", run_models=True, poll_seconds=0))
+    assert out.findings[0].checks["runs"][0] is None
 
 
 def test_dependency_check_without_running():
@@ -86,7 +134,7 @@ def test_dependency_check_without_running():
 def test_hms_run_executes_with_hms_install():
     call = _fake_call([], [_hms_project("W", ["10-yr"])], OK)
     out = run_review(call, ReviewOptions(models_root="x", run_models=True))
-    assert out.findings[0].checks["runs"][0] == "Y" and call.ran[0][1]["Cmd"] == r"C:\hms\hec-hms.cmd"
+    assert out.findings[0].checks["runs"][0] == "Y" and call.ran[0][1]["Exe"] == r"C:\hms\hec-hms.cmd"
 
 
 def test_event_matching_handles_return_periods_and_annual_chance():
@@ -95,6 +143,14 @@ def test_event_matching_handles_return_periods_and_annual_chance():
     text = "Ray 10-yr | Q25yr | 50 year storm | 1% AEP | 2%"
     assert find_events(text, ["10-yr", "25-yr", "50-yr", "100-yr"]) == {"10-yr": True, "25-yr": True, "50-yr": True, "100-yr": True}
     assert find_events("100yr only", ["10-yr", "100-yr"]) == {"10-yr": False, "100-yr": True}  # 100yr is not 10yr
+
+
+def test_event_matching_reads_zero_padded_annual_chance_profiles():
+    from rubric_review.events import find_events
+
+    names = "50%_ACE,10%_ACE,04%_ACE,02%_ACE,01%_ACE,0.02%_ACE"
+    found = find_events(names, ["10-yr", "25-yr", "50-yr", "100-yr", "500-yr"])
+    assert found == {"10-yr": True, "25-yr": True, "50-yr": True, "100-yr": True, "500-yr": False}  # 0.02% is 5000-yr
 
 
 def test_hms_events_need_a_run_for_every_expected_event():
@@ -237,3 +293,49 @@ def test_winrm_remote_errors_raise(monkeypatch):
     session._client = BadClient()
     with pytest.raises(RuntimeError, match="boom"):
         session.run_script("inventory_software.ps1")
+
+
+# ---- Progress snapshots -----------------------------------------------------------------------------------------
+
+def test_status_callback_gets_snapshots_with_model_counts_instead_of_per_poll_text():
+    from rubric_review import RunStatus
+
+    snaps, messages = [], []
+    busy = {**BUSY, "processes": ["RasUnsteady.exe (cpu 7s)"]}
+    project = _ras_project("M", _plan("P1"))
+    project["plans"].append(_plan("P2"))
+    call = _fake_call([project], [], OK, polls=[busy, OK, busy])
+    run_review(call, ReviewOptions(models_root="x", run_models=True, poll_seconds=0, progress=messages.append, status=snaps.append))
+    assert [(s.unit, s.state, s.done, s.total) for s in snaps] == [
+        ("P1", "running", 0, 2), ("P1", "finished", 0, 2), ("P2", "running", 1, 2), ("P2", "finished", 1, 2)]
+    first = snaps[0]
+    assert isinstance(first, RunStatus) and first.project == "M" and first.tool == "ras" and first.stage == "unsteady flow"
+    assert "last file a.hdf" in first.detail and snaps[1].exit_code == 0
+    assert not any("running 0:20" in m for m in messages)  # per-poll text suppressed
+    assert any("finished after" in m for m in messages)  # events still reported
+
+
+def test_stage_comes_from_the_running_hec_process():
+    from rubric_review.review import _stage
+
+    assert _stage({"processes": ["conhost.exe (cpu 0s)", "RasProcess.exe (cpu 2s)"], "lastFile": ""}) == "preprocessing geometry"
+    assert _stage({"processes": ["java.exe (cpu 9s)"], "lastFile": ""}) == "computing"
+    assert _stage({"processes": ["conhost.exe (cpu 0s)"], "lastFile": "M.p01.hdf"}) == "writing results"
+    assert _stage({"processes": [], "lastFile": ""}) == "starting"
+
+
+def test_notebook_progress_shows_models_complete_and_one_row_per_vm():
+    from rubric_review import NotebookProgress, RunStatus
+
+    board = NotebookProgress()
+    board._display = None  # force the non-IPython path even if pytest runs under IPython
+    board.say("dynamo02 started")
+    board.status(RunStatus("L", "ras", "M", "Plan A", 95, "running", "unsteady flow", "last file x", host="dynamo02.tacc.utexas.edu", done=3, total=14))
+    board.status(RunStatus("L2", "ras", "M", "Plan B", 10, "running", "starting", "", host="dynamo03.tacc.utexas.edu", done=3, total=14))
+    html = board.render_html()
+    assert "3 of 14 models complete (21%)" in html and "width:21%" in html
+    assert "dynamo02" in html and "Plan A" in html and "1:35" in html and "unsteady flow" in html
+    assert "dynamo03" in html and "Plan B" in html and "dynamo02 started" in html
+    board.status(RunStatus("L", "ras", "M", "Plan A", 120, "finished", "finished", "", 0, host="dynamo02.tacc.utexas.edu", done=3, total=14))
+    html = board.render_html()
+    assert "Plan A" not in html and "4 of 14 models complete" in html  # finished rows leave the table and count up

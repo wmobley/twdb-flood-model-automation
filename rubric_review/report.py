@@ -74,8 +74,9 @@ def _card(f: ModelFinding) -> str:
         for kind, (status, comment, _fig) in f.checks.items()
     )
     figures = "".join(_img(fig) for _s, _c, fig in f.checks.values())
+    where = f" · tested on {escape(f.host.split('.')[0])}" if f.host else ""
     return (f"<div class='model'><h4>{escape(f.project)} <small>· {escape(f.unit)}</small> {_badge(f.verdict)}</h4>"
-            f"<small><code>{escape(f.path)}</code></small><ul>{lines}</ul>{figures}</div>")
+            f"<small><code>{escape(f.path)}</code>{where}</small><ul>{lines}</ul>{figures}</div>")
 
 
 def _theme(outcome: ReviewOutcome, tool: str, title: str) -> str:
@@ -109,7 +110,8 @@ def write_html_report(outcome: ReviewOutcome, dest: str | Path, title: str, host
         items = "".join(f"<li><b>{escape(f.project)}</b> · {escape(f.unit)} — <i>{kind}</i>: {escape(c)}</li>" for f, kind, c in needs_review)
         review = f"<h2>Items for the reviewer</h2><p>These could not be decided automatically.</p><ul>{items}</ul>"
     runs = "".join(
-        f"<details><summary>{escape(e['tool'])} — {escape(e['project'])} / {escape(e['plan'])}</summary>"
+        f"<details><summary>{escape(e['tool'])} — {escape(e['project'])} / {escape(e['plan'])}"
+        f"{' (' + escape(str(e['host']).split('.')[0]) + ')' if e.get('host') else ''}</summary>"
         f"<pre>{escape(e.get('messagesTail') or e.get('outputTail') or '')}</pre></details>"
         for e in outcome.executions
     )
