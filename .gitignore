@@ -17,9 +17,8 @@ htmlcov/
 .ipynb_checkpoints/
 *.jupyter_cache/
 
-# Model outputs and operational logs (rubric review results are kept: report, filled checklist, run logs)
-outputs/*
-!outputs/rubric-review/
+# Model outputs and operational logs
+outputs/
 run-outputs/
 logs/
 *.log
