@@ -204,3 +204,36 @@ def test_footprint_coverage_pass_fail_and_figure(tmp_path):
     assert missing.status is None
 
 
+
+
+# ---- WinRM session --------------------------------------------------------------------------------------------
+
+def test_winrm_run_script_quotes_parameters_and_parses_json(monkeypatch):
+    from rubric_review.winrm import WinRMSession
+
+    sent = []
+
+    class FakeClient:
+        def execute_ps(self, script):
+            sent.append(script)
+            return '{"ok": true}', type("S", (), {"error": []})(), False
+
+    session = WinRMSession("h", "u", "p")
+    session._client = FakeClient()
+    assert session.run_script("inventory_ras.ps1", Root=r"C:\My Models\it's") == {"ok": True}
+    assert sent[0].startswith("& {") and sent[0].rstrip().endswith(r"-Root 'C:\My Models\it''s'")
+    with pytest.raises(ValueError):
+        session.run_script("inventory_ras.ps1", Root='x"; calc')
+
+
+def test_winrm_remote_errors_raise(monkeypatch):
+    from rubric_review.winrm import WinRMSession
+
+    class BadClient:
+        def execute_ps(self, script):
+            return "", type("S", (), {"error": ["boom"]})(), True
+
+    session = WinRMSession("h", "u", "p")
+    session._client = BadClient()
+    with pytest.raises(RuntimeError, match="boom"):
+        session.run_script("inventory_software.ps1")
