@@ -1,0 +1,460 @@
+I have the following files I need to test that they will successfull run in hec-ras on a vm  OneDrive_1_10-27-2026 tree
+.
+├── 1D_HECRAS60
+│   ├── WYC_T03
+│   │   ├── Terrain
+│   │   │   ├── Terrain.hdf
+│   │   │   ├── Terrain.vrt
+│   │   │   ├── Terrain.wyc_3ft.tif
+│   │   │   └── Terrain.wyc_trib_3ft.tif
+│   │   ├── WYC_T03.color_scales
+│   │   ├── WYC_T03.f02
+│   │   ├── WYC_T03.g02
+│   │   ├── WYC_T03.g02.hdf
+│   │   ├── WYC_T03.g05
+│   │   ├── WYC_T03.g05.hdf
+│   │   ├── WYC_T03.O01
+│   │   ├── WYC_T03.O02
+│   │   ├── WYC_T03.O03
+│   │   ├── WYC_T03.O04
+│   │   ├── WYC_T03.O05
+│   │   ├── WYC_T03.O06
+│   │   ├── WYC_T03.p02
+│   │   ├── WYC_T03.p02.hdf
+│   │   ├── WYC_T03.p05
+│   │   ├── WYC_T03.p05.hdf
+│   │   ├── WYC_T03.p06.hdf
+│   │   ├── WYC_T03.prj
+│   │   ├── WYC_T03.r02
+│   │   ├── WYC_T03.r05
+│   │   └── WYC_T03.rasmap
+│   └── WYC_T03.zip
+└── 2D_HECRAS641
+    └── SwissAlpine_2D
+        ├── Features
+        │   ├── Profile Lines.dbf
+        │   ├── Profile Lines.prj
+        │   ├── Profile Lines.shp
+        │   └── Profile Lines.shx
+        ├── Flows
+        │   ├── Inflow_DSS
+        │   │   ├── EX_01_.dss
+        │   │   ├── EX_04_.dss
+        │   │   ├── EX_10_.dss
+        │   │   └── EX_50_.dss
+        │   └── Precipitation_DSS
+        │       └── 100yr.dss
+        ├── Projection.prj
+        ├── Soils
+        │   ├── Infiltration1.hdf
+        │   ├── LandCover (1).hdf
+        │   ├── LandCover (1).tif
+        │   ├── Soils.hdf
+        │   └── Soils.tif
+        ├── SwissAlpine_2D.b01
+        ├── SwissAlpine_2D.b02
+        ├── SwissAlpine_2D.b03
+        ├── SwissAlpine_2D.b04
+        ├── SwissAlpine_2D.b05
+        ├── SwissAlpine_2D.b06
+        ├── SwissAlpine_2D.b07
+        ├── SwissAlpine_2D.b10
+        ├── SwissAlpine_2D.b11
+        ├── SwissAlpine_2D.b12
+        ├── SwissAlpine_2D.b13
+        ├── SwissAlpine_2D.b14
+        ├── SwissAlpine_2D.b15
+        ├── SwissAlpine_2D.b16
+        ├── SwissAlpine_2D.bco01
+        ├── SwissAlpine_2D.bco02
+        ├── SwissAlpine_2D.bco03
+        ├── SwissAlpine_2D.bco04
+        ├── SwissAlpine_2D.bco05
+        ├── SwissAlpine_2D.bco06
+        ├── SwissAlpine_2D.bco07
+        ├── SwissAlpine_2D.bco10
+        ├── SwissAlpine_2D.bco11
+        ├── SwissAlpine_2D.bco12
+        ├── SwissAlpine_2D.bco13
+        ├── SwissAlpine_2D.bco14
+        ├── SwissAlpine_2D.bco15
+        ├── SwissAlpine_2D.bco16
+        ├── SwissAlpine_2D.c01
+        ├── SwissAlpine_2D.c02
+        ├── SwissAlpine_2D.c03
+        ├── SwissAlpine_2D.color_scales
+        ├── SwissAlpine_2D.dss
+        ├── SwissAlpine_2D.f01
+        ├── SwissAlpine_2D.g01
+        ├── SwissAlpine_2D.g01.hdf
+        ├── SwissAlpine_2D.g02
+        ├── SwissAlpine_2D.g02.hdf
+        ├── SwissAlpine_2D.g03
+        ├── SwissAlpine_2D.g03.hdf
+        ├── SwissAlpine_2D.ic.o01
+        ├── SwissAlpine_2D.ic.o02
+        ├── SwissAlpine_2D.ic.o03
+        ├── SwissAlpine_2D.ic.o04
+        ├── SwissAlpine_2D.ic.o05
+        ├── SwissAlpine_2D.ic.o06
+        ├── SwissAlpine_2D.ic.o07
+        ├── SwissAlpine_2D.ic.o10
+        ├── SwissAlpine_2D.ic.o11
+        ├── SwissAlpine_2D.ic.o12
+        ├── SwissAlpine_2D.ic.o13
+        ├── SwissAlpine_2D.ic.o14
+        ├── SwissAlpine_2D.ic.o15
+        ├── SwissAlpine_2D.ic.o16
+        ├── SwissAlpine_2D.p01
+        ├── SwissAlpine_2D.p01.hdf
+        ├── SwissAlpine_2D.p02
+        ├── SwissAlpine_2D.p02.hdf
+        ├── SwissAlpine_2D.p03
+        ├── SwissAlpine_2D.p03.hdf
+        ├── SwissAlpine_2D.p04
+        ├── SwissAlpine_2D.p04.hdf
+        ├── SwissAlpine_2D.p05
+        ├── SwissAlpine_2D.p05.hdf
+        ├── SwissAlpine_2D.p06
+        ├── SwissAlpine_2D.p06.hdf
+        ├── SwissAlpine_2D.p07
+        ├── SwissAlpine_2D.p07.hdf
+        ├── SwissAlpine_2D.p10
+        ├── SwissAlpine_2D.p10.hdf
+        ├── SwissAlpine_2D.p11
+        ├── SwissAlpine_2D.p11.hdf
+        ├── SwissAlpine_2D.p12
+        ├── SwissAlpine_2D.p12.hdf
+        ├── SwissAlpine_2D.p13
+        ├── SwissAlpine_2D.p13.hdf
+        ├── SwissAlpine_2D.p14
+        ├── SwissAlpine_2D.p14.hdf
+        ├── SwissAlpine_2D.p15
+        ├── SwissAlpine_2D.p15.hdf
+        ├── SwissAlpine_2D.p16
+        ├── SwissAlpine_2D.p16.hdf
+        ├── SwissAlpine_2D.prj
+        ├── SwissAlpine_2D.rasmap
+        ├── SwissAlpine_2D.u01
+        ├── SwissAlpine_2D.u01.hdf
+        ├── SwissAlpine_2D.u02
+        ├── SwissAlpine_2D.u02.hdf
+        ├── SwissAlpine_2D.u03
+        ├── SwissAlpine_2D.u03.hdf
+        ├── SwissAlpine_2D.u04
+        ├── SwissAlpine_2D.u04.hdf
+        ├── SwissAlpine_2D.u05
+        ├── SwissAlpine_2D.u05.hdf
+        ├── SwissAlpine_2D.u06
+        ├── SwissAlpine_2D.u06.hdf
+        ├── SwissAlpine_2D.x01
+        ├── SwissAlpine_2D.x02
+        ├── SwissAlpine_2D.x03
+        ├── systemInfoEncoded.txt
+        └── Terrain
+            ├── Terrain.Clone.Alt1_Det.hdf
+            ├── Terrain.Clone.Alt1_Det.vrt
+            ├── Terrain.Clone.Alt2_Div.hdf
+            ├── Terrain.Clone.Alt2_Div.vrt
+            ├── Terrain.Clone.ft.tif
+            ├── Terrain.Clone.hdf
+            ├── Terrain.Clone.vrt
+            ├── Terrain.hdf
+            └── Terrain.vrt
+
+12 directories, 150 files Help me step by step check it
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+Worked for 11s
+
+
+
+
+
+
+
+We'll validate both HEC-RAS projects step by step on the Windows VM, starting with the 1D model before attempting the more complex 2D simulations.
+
+Our goal is to verify that the models can run independently on the VM, eventually allowing us to execute them automatically through a job controller.
+Initial assessment
+Based on your file tree:
+Model	Version	Plans	Initial assessment
+WYC_T03	6.0	2 plan files (p02, p05)	Ready for initial validation
+SwissAlpine_2D	6.4.1	14 plan files (p01–p07, p10–p16)	More complex; requires checking external data dependencies
+
+Both projects contain the expected HEC-RAS project files, geometry, flow data, and plans. These are encouraging signs, but they don't establish that the models will run successfully. 
+Hydrologic Engineering Center
+
+
+One detail to investigate: WYC_T03.p06.hdf exists without a corresponding WYC_T03.p06 plan file. This may be leftover output rather than an actual problem.
+Our validation process
+1
+
+Verify VM environment
+
+Confirm HEC-RAS installations and project locations
+
+
+2
+
+Check model dependencies
+
+Confirm each plan references existing geometry, flow, terrain, and DSS inputs
+
+
+3
+
+Run a 1D test
+
+Execute one WYC_T03 plan and inspect results
+
+
+4
+
+Run a 2D test
+
+Execute one SwissAlpine plan and inspect results
+
+
+5
+
+Automate execution
+
+Prepare repeatable execution and logging for all plans
+
+
+
+Step 1 — Verify the VM environment
+We'll start with Windows PowerShell on the VM.
+
+First, identify which versions of HEC-RAS are installed:
+Get-ChildItem "C:\Program Files (x86)\HEC" -ErrorAction SilentlyContinue |
+  Select-Object Name, FullName
+
+
+Then check the alternative installation location:
+Get-ChildItem "C:\Program Files\HEC" -ErrorAction SilentlyContinue |
+  Select-Object Name, FullName
+
+
+Ideally, we'd test with HEC-RAS 6.0 and 6.4.1 to reproduce the original modeling environments. HEC-RAS 6.6 is also an option for compatibility testing, since USACE documents backward compatibility with earlier projects. 
+Hydrologic Engineering Center
+
+
+Next, make sure the model files are extracted into ordinary local folders rather than being run directly from the downloaded ZIP files or a cloud-synced directory.
+
+For example:
+C:\HECRAS\Models\
+    WYC_T03\
+        WYC_T03.prj
+        ...
+    SwissAlpine_2D\
+        SwissAlpine_2D.prj
+        ...
+
+
+The original subfolders, such as Terrain, Flows, and Soils, must remain in their relative positions.
+
+Your first task: Run the two PowerShell commands above and share their output, along with the folder where you've placed the extracted models.
+
+Then we'll proceed to Step 2, where we'll inspect the .prj and .p## files to identify exactly which model scenarios are executable and whether any referenced inputs are missing.
+
+
+
+
+
+
+
+
+
+       
+
+
+
+
+
+
+Name    FullName
+----    --------
+HEC-HMS C:\Program Files (x86)\HEC\HEC-HMS
+HEC-RAS C:\Program Files (x86)\HEC\HEC-RAS
+
+
+PS C:\Users\dynamo> Get-ChildItem "C:\Program Files\HEC" -ErrorAction SilentlyContinue |
+>>   Select-Object Name, FullName
+
+Name    FullName
+----    --------
+HEC-HMS C:\Program Files\HEC\HEC-HMS
+
+
+PS C:\Users\dynamo> wwe had previously installed all of the versions 2.x 3.x etc
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+Good. That confirms HEC-RAS is installed, but the command only showed the HEC-RAS parent directory, not the individual versions installed.
+
+Let's check those next.
+Step 1.2 — Identify installed HEC-RAS versions
+Run this in PowerShell:
+Get-ChildItem "C:\Program Files (x86)\HEC\HEC-RAS" |
+    Select-Object Name, FullName
+
+
+You should see something resembling:
+Name       FullName
+----       --------
+6.0        C:\Program Files (x86)\HEC\HEC-RAS\6.0
+6.4.1      C:\Program Files (x86)\HEC\HEC-RAS\6.4.1
+6.6        C:\Program Files (x86)\HEC\HEC-RAS\6.6
+
+
+If your earlier installations used different directory names, this will reveal them.
+
+Why this matters: We want to test the models with their original versions first:
+- WYC_T03 → HEC-RAS 6.0
+- SwissAlpine_2D → HEC-RAS 6.4.1
+We can subsequently test both using HEC-RAS 6.6 to determine whether one installation can support all the models.
+
+Next: Paste the command output, and we'll identify the correct executables before moving on to validating the model inputs.
+
+
+
+
+
+
+
+
+
+       
+
+
+
+
+
+
+Name  FullName
+----  --------
+3.1.3 C:\Program Files (x86)\HEC\HEC-RAS\3.1.3
+4.1.0 C:\Program Files (x86)\HEC\HEC-RAS\4.1.0
+5.0.7 C:\Program Files (x86)\HEC\HEC-RAS\5.0.7
+6.6   C:\Program Files (x86)\HEC\HEC-RAS\6.6
+7.0.2 C:\Program Files (x86)\HEC\HEC-RAS\7.0.2
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+Great. Your VM has five versions of HEC-RAS installed:
+Version	Installed	Relevance
+3.1.3	Yes	Legacy models
+4.1.0	Yes	Legacy models
+5.0.7	Yes	Older 1D/2D models
+6.6	Yes	Candidate for both test models
+7.0.2	Yes	Newer compatibility testing
+
+Neither of the original model versions (6.0 and 6.4.1) is installed.
+
+My recommendation: Start by testing both projects in HEC-RAS 6.6. It's closer to their original versions than 7.0.2 and gives us an opportunity to standardize model execution on a single version.
+
+However, we should preserve the original files because opening and saving projects in newer HEC-RAS versions can modify them.
+
+USACE confirms that HEC-RAS 6.6 supports projects developed in earlier versions, although that does not guarantee identical numerical results. 
+Hydrologic Engineering Center
+
+Step 2 — Locate the model projects
+Before checking the plans, let's locate the actual model files on the VM.
+
+Run this PowerShell command:
+Get-ChildItem "C:\Users\dynamo" -Filter "*.prj" `
+    -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.BaseName -in @("WYC_T03", "SwissAlpine_2D")
+    } |
+    Select-Object FullName
+
+
+This will search for both HEC-RAS project files and return their paths.
+
+Send me that output next. We'll then use those exact paths to check the plan-to-geometry and flow references, without changing the models.
+
+
+
+
+
+
+
+
+
+       
+
+
+
+
+
+
+C:\Users\dynamo\Downloads\Test1_10_26_2026\Test1_10_26_2026
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+Good. It looks like your models are under:
+C:\Users\dynamo\Downloads\Test1_10_26_2026\Test1_10_26_2026
+
+
+Let's confirm the actual HEC-RAS project files are present before inspecting their dependencies.
+Step 2.1 — Find the HEC-RAS project files
+Run this PowerShell command:
+$root = "C:\Users\dynamo\Downloads\Test1_10_26_2026\Test1_10_26_2026"
+
+Get-ChildItem $root -Recurse -File -Filter "*.prj" |
+    Where-Object {
+        $_.Name -in @("WYC_T03.prj", "SwissAlpine_2D.prj")
+    } |
+    Select-Object FullName
+
+
+We should find two files: WYC_T03.prj and SwissAlpine_2D.prj.
+
+If both are present, we'll move on to checking their plan references, geometry files, flow files, and other dependencies.
+
+Paste the output from this command. We'll keep this to one verification step at a time, so we can identify problems before attempting any simulations.
