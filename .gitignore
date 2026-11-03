@@ -22,7 +22,6 @@ outputs/*
 !outputs/rubric-review/
 run-outputs/
 logs/
-!outputs/rubric-review/**/logs/
 *.log
 *.hdf
 *.hdf5
